@@ -1,0 +1,9 @@
+宽表数据库：
+1. 数据库：gabase
+2. 数据表命名规范：
+b_<module>_<function>
+如：b_user_label: 用户标签表
+b_user_profile: 用户基础宽表
+b_member_profile: 社员基础宽表
+3. 数据视图：
+v_<module>：视图
