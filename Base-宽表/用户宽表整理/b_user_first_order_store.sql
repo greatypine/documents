@@ -1,5 +1,5 @@
 #用户首次消费门店建表语句
-create table b_customer_first_store(
+create table b_user_first_order_store(
 	customer_id string,
 	customer_phone string,
 	store_id string,

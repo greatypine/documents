@@ -1,5 +1,5 @@
 #用户档案表建表语句
-create table b_customer_profile(
+create table b_user_profile(
 	customer_id string,
 	customer_name string,
 	customer_phone string,
