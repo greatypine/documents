@@ -7,3 +7,6 @@ b_user_profile: 用户基础宽表
 b_member_profile: 社员基础宽表
 3. 数据视图：
 v_<module>：视图
+
+4. m_<module>_<function>
+   s_<module>_<function>  清洗数据中间表
