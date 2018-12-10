@@ -1,0 +1,42 @@
+1. 写一个用户与idcard的对应关系表 中间表
+1）社员
+2）线上员工
+3）养老餐
+
+2. 国安社区员工tag：线上员工 t_sync_record，国安侠 t_human_resource
+
+3. 近360天的消费次数tag
+
+4. 差评tag （差评次数）
+
+5. 400消费tag  （消费次数）
+
+6. 无效用户tag（1,2）----单店单日注册次数（7位电话号码）
+
+7. 过账支付
+
+8. 用户单日最大单数， 最大单日累计金额
+
+9.代客下单用户
+
+
+
+10.
+select
+			t.customer_id,
+			t.mac_address,
+			row_number() over(partition by t.customer_id order by count(1) desc) as rank
+		from gabdp_log.t_log as t
+		where t.customer_id is not null and t.customer_id != '' and t.customer_id != 'null'
+			and t.mac_address is not null and t.mac_address != '' and t.mac_address != 'null' and length(t.mac_address)=17
+			group by t.customer_id, t.mac_address
+
+
+
+11. select
+			t.customer_id,
+			max(t.request_date) as request_date
+		from gabdp_log.t_log as t
+		where t.customer_id is not null and t.customer_id != '' and t.customer_id != 'null'
+			and t.request_date is not null and t.request_date != '' and t.request_date != 'null'
+			group by t.customer_id
