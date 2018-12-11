@@ -1,4 +1,4 @@
-1. 写一个用户与idcard的对应关系表 中间表
+﻿1. 写一个用户与idcard的对应关系表 中间表
 1）社员
 2）线上员工
 3）养老餐
@@ -22,10 +22,67 @@
 	    select distinct phone from daqweb.t_humanresources
 	) th on (th.phone = tc.mobilephone)
 
-3. 近360天的消费次数tag
+3. 近360天的消费次数tag (累计消费订单量/订单金额/订单频道/门店数/sku数量)
+insert overwrite s_user_360ds_order_info
+select
+	tb.customer_id, -- 客户ID
+	tb.cum_orders_360ds, -- 最近360天订单量
+	360 / tb.cum_orders_360ds as avg_buy_interval_360ds, -- 最近360天平均订单间隔
+	tb.cum_buy_360ds, -- 最近360天订单额
+	tb.avg_buy_360ds, -- 最近360天均订单额
+	tb.max_360ds, -- 最近360天最高单笔订单额
+	tb.cum_channels_360ds, -- 最近360天下单频道数量
+	e.cum_eshops_360ds, -- 最近360天下单E店数量
+	s.cum_stores_360ds, -- 最近360天下单门店数量
+	ep.cum_sku_360ds -- 最近360天下单sku数量
+from (
+	select
+		tmp.customer_id,
+		count(tmp.order_group_id) as cum_orders_360ds,
+		sum(tmp.payable_price) as cum_buy_360ds,
+		avg(tmp.payable_price) as avg_buy_360ds,
+		max(tmp.payable_price) as max_360ds,
+		count(distinct tmp.channel_id) as cum_channels_360ds
+	from (
+		select
+			vo.order_group_id,
+			vo.customer_id,
+			vo.order_create_time,
+			vo.payable_price,
+			vo.channel_id
+		from v_full_success_order as vo
+		where datediff(now(), vo.order_create_time) <= 360
+			group by vo.order_group_id, vo.customer_id, vo.order_create_time, vo.payable_price, vo.channel_id
+	) as tmp
+		group by tmp.customer_id
+) as tb
+left join (
+	select
+		vo.customer_id,
+		count(distinct vo.eshop_id) as cum_eshops_360ds
+	from v_full_success_order as vo
+	where datediff(now(), vo.order_create_time) <= 360
+		group by vo.customer_id
+) as e on e.customer_id = tb.customer_id
+left join (
+	select
+		vo.customer_id,
+		count(distinct vo.store_id) as cum_stores_360ds
+	from v_full_success_order as vo
+	where datediff(now(), vo.order_create_time) <= 360
+		group by vo.customer_id
+) as s on s.customer_id = tb.customer_id
+left join (
+	select
+		voi.customer_id,
+		count(distinct voi.eshop_pro_id) as cum_sku_360ds
+	from v_full_success_order_item as voi
+	where datediff(now(), voi.order_create_time) <= 360
+		group by voi.customer_id
+) as ep on ep.customer_id = tb.customer_id
 
-4. 差评tag （差评次数）
 
+4. 差评tag （差评次数）   --- cum_bad_contents_tot
 
 5. 400消费tag  （消费次数）
 select customer_id from gemini.t_order where order_source = 'callcenter' group by customer_id
