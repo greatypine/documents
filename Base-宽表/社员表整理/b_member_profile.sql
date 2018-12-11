@@ -1,76 +1,7 @@
-select 
-tc.id as customer_id,
-tc.mobilephone as mobilephone,
-tca.idcard as idcard,
-case when tca.idcard is not null and tca.idcard != '' then strleft(tca.idcard,6) else null end 
-as birthplace,
-case when tca.idcard is not null and tca.idcard != '' then strleft(tca.idcard,2) else null end 
-as born_province,
-case when tca.idcard is not null and tca.idcard != '' then strleft(tca.idcard,4) else null end 
-as born_city,
-tca.birthday as birthday,
-tc.create_time as regist_time,
-tc.associator_level as associator_level,
-tc.white as white,
-case when torp.pay_time is not null and torp.pay_time != '' then torp.pay_time when tca.create_time is not null and tca.create_time != '' then tca.create_time else '' end
-as opencard_time,
-case when torp.pay_time is not null and torp.pay_time != '' then torp.pay_time when tca.create_time is not null and tca.create_time != '' then tca.create_time else '' end
-as first_opencard_time,
-case when torp.store_id is not null and torp.store_id != '' then torp.store_id when tcard.store_id is not null and tcard.store_id != '' then tcard.store_id else '' end 
-as regist_storeid,
-case when torp.city_code is not null and torp.city_code != '' then ts.city_code when tcard.city_code  is not null and tcard.city_code != '' then tcard.city_code else tca.city_code end 
-as regist_cityno,
-case when torp.type is not null and torp.type != '' then torp.type else tcard.type end as member_type, 
-tc.associator_expiry_date as associator_expiry_date,
-tc.customer_source as customer_source
-from gemini.t_customer tc 
-LEFT JOIN gabase.b_customer_associator tca ON (tc.customer_id = tca.customer_id)
-LEFT JOIN (
-	select t.customer_id,t.store_id,t.type,t.pay_time,t.city_code from (
-	select
-	    customer_id,torp.store_id,torp.type,torp.pay_time,ts.city_code
-		ROW_NUMBER() OVER (partition BY customer_id ORDER BY create_time ASC) as rn
-	from gemini.t_order_receipts torp
-	left join t_store ts ON (ts.store_id = tbatch.store_id) 
-	where torp.pay_status ='payed' and (torp.type = 'associator_start_2' OR torp.type = 'associator_up_2' OR torp.type='plus') 
-) t where t.rn = 1
-) torp ON (torp.customer_id = tc.customer_id)
-LEFT JOIN (
-	select  tcard.customer_id,tcard.type,tbatch.store_id,ts.city_code from (
-		select tcard.customer_id,tcard.type,tbatch.store_id,ts.city_code
-			ROW_NUMBER() OVER (partition BY customer_id ORDER BY create_time ASC) as rn
-		from t_card tcard
-		join t_exchange_card_batch tbatch on (tcard.batch_id = tbatch.id)
-		left join t_store ts ON (ts.store_id = tbatch.store_id) where tcard.customer_id is not null 
-	) t where t.rn = 1
-) tcard ON (tcard.customer_id = tc.customer_id)
-LEFT JOIN t_member_operation_record tmor ON (tomr.customer_id = tc.customer_id and torm.andmode ='adminDefined' and torm.level =2 )
-where tc.associator_level = 2
-and tc.white!='QA'
-
-
-
-#款单表查询会员款单
-select t.customer_id,t.store_id,t.type,t.pay_time,t.city_code from (
-	select
-	    customer_id,torp.store_id,torp.type,torp.pay_time,ts.city_code,
-		ROW_NUMBER() OVER (partition BY torp.customer_id ORDER BY torp.create_time ASC) as rn
-	from gemini.t_order_receipts torp
-	left join gemini.t_store ts ON (ts.id = torp.store_id) 
-	where torp.pay_status ='payed' and (torp.type = 'associator_start_2' OR torp.type = 'associator_up_2' OR torp.type='plus') 
-) t where t.rn = 1
-
-#集采用户查询
-select  tcard.customer_id,tcard.type,tbatch.store_id from (
-	select tcard.customer_id,tcard.type,tbatch.store_id,
-		ROW_NUMBER() OVER (partition BY customer_id ORDER BY create_time ASC) as rn
-	from t_card tcard
-	join t_exchange_card_batch tbatch on (tcard.batch_id = tbatch.id) where tcard.customer_id is not null 
-) t where t.rn = 1
-
 
 
 #该表创建为视图：社员gmv 社员订单量，社员订单返利，社员订单退款，生日券使用次数，25元开卡券使用次数，是否领取开卡礼
+create view if not exsits v_member_consumption
 select
 	customer_id,
 	sum(case when order_tag1 like '%M%' then trading_price else 0 end) as member_GMV,
@@ -80,7 +11,7 @@ select
 	sum(case when order_tag4 = 'A2' then 1 else 0 end) as birthday_coupon_use_count,
 	sum(case when order_tag4 = 'A1' then 1 else 0 end) as coupons_25_use_count,
 	sum(case when order_tag4 = 'A3' then 1 else 0 end) as is_get_cardgift
-from daqweb.df_mass_order_total GROUP BY customer_id
+from daqweb.df_mass_order_total where create_time < concat(from_unixtime(unix_timestamp(now()),"yyyy-MM-dd"), ' 00:00:00') GROUP BY customer_id
 
 
 
@@ -116,7 +47,6 @@ tor.apportion_rebate,
 tor.birthday_coupon_use_count,
 tor.coupons_25_use_count,
 case when tor.is_get_cardgift != 0 then 1 else 0 end as is_get_cardgift,
-case when torp.customer_id is not null then 1 else 0 end as regist_type,
 
 dum.status,
 now() as create_time,
@@ -135,20 +65,206 @@ select
 	sum(case when order_tag4 = 'A3' then 1 else 0 end) as is_get_cardgift
 	from daqweb.df_mass_order_total GROUP BY customer_id
 ) tor ON (tor.customer_id = dum.customer_id)
-LEFT JOIN 
-(
-	select t.customer_id,t.store_id,t.type,t.pay_time,t.city_code from (
-		select
-		    customer_id,torp.store_id,torp.type,torp.pay_time,ts.city_code,
-			ROW_NUMBER() OVER (partition BY torp.customer_id ORDER BY torp.create_time ASC) as rn
-		from gemini.t_order_receipts torp
-		left join gemini.t_store ts ON (ts.id = torp.store_id) 
-		where torp.pay_status ='payed' and (torp.type = 'associator_start_2' OR torp.type = 'associator_up_2' OR torp.type='plus') 
-	) t where t.rn = 1
-) torp ON (torp.customer_id = dum.customer_id)
 LEFT JOIN gemini.t_customer tc ON (tc.customer_id = dum.customer_id)
 
+#更新
+upsert INTO gabase.b_member_profile ( customer_id, regist_storeid, regist_cityno, opencard_time, associator_expiry_date, member_type, invitecode, opencard_count, MODE, status, update_time)
+SELECT bmp.customer_id,
+       t_tab.regist_storeid,
+       t_tab.regist_cityno,
+       t_tab.opencard_time,
+       t_tab.associator_expiry_date,
+       t_tab.member_type,
+       t_tab.invitecode,
+       case when 
+        to_date(t_tab.opencard_time) != to_date(bmp.opencard_time) and to_date(t_tab.opencard_time) != to_date(bmp.first_opencard_time)
+        then cast(bmp.opencard_count+1 as int) else cast(bmp.opencard_count as int) end as opencard_count,
+       t_tab.MODE,
+       t_tab.status,
+       t_tab.update_time
+FROM gabase.b_member_profile bmp
+INNER JOIN
+  ( SELECT tc.id AS customer_id,
+           bca.opencard_store_id AS regist_storeid,
+           bca.city_no AS regist_cityno,
+           bca.create_time AS opencard_time,
+           tc.associator_expiry_date AS associator_expiry_date,
+           CASE
+               WHEN torp.type IS NOT NULL
+                    AND torp.type != '' THEN torp.type
+               ELSE tcard.type
+           END AS member_type,
+           ext.invitecode AS invitecode,
+           1 AS opencard_count,
+           tmor.mode AS MODE,
+           CASE
+               WHEN tc.associator_expiry_date >now() THEN 0
+               ELSE 1
+           END AS status,
+           cast(now() AS string) AS update_time
+   FROM gemini.t_customer tc
+   LEFT JOIN gabase.b_customer_associator bca ON (tc.id = bca.customer_id)
+   LEFT JOIN gemini_mongo.t_customer_info_record_ext ext ON (ext.customerid = tc.id)
+   LEFT JOIN
+     ( SELECT t.customer_id,
+              t.type
+      FROM
+        (SELECT customer_id,
+                TYPE,
+                ROW_NUMBER() OVER (partition BY customer_id
+                                   ORDER BY create_time DESC) AS rn
+         FROM gemini.t_order_receipts
+         WHERE pay_status ='payed'
+           AND (TYPE = 'associator_start_2'
+                OR TYPE = 'associator_up_2'
+                OR TYPE='plus') ) t
+      WHERE t.rn = 1 ) torp ON (torp.customer_id = tc.id)
+   LEFT JOIN
+     ( SELECT customer_id,
+              MODE
+      FROM
+        ( SELECT customer_id,
+                 MODE,
+                 ROW_NUMBER() OVER (partition BY customer_id
+                                    ORDER BY create_time DESC) AS rn
+         FROM gemini.t_member_operation_record
+         WHERE LEVEL = 2 ) ta
+      WHERE ta.rn = 1 ) tmor ON (tmor.customer_id = tc.id)
+   LEFT JOIN
+     ( SELECT t.customer_id,
+              t.type
+      FROM
+        (SELECT tcard.customer_id,
+                tcard.type,
+                ROW_NUMBER() OVER (partition BY customer_id
+                                   ORDER BY tcard.create_time DESC) AS rn
+         FROM gemini.t_card tcard
+         JOIN gemini.t_exchange_card_batch tbatch ON (tcard.batch_id = tbatch.id)
+         WHERE tcard.customer_id IS NOT NULL ) t
+      WHERE t.rn = 1 ) tcard ON (tcard.customer_id = tc.id)
+   WHERE ((tc.create_time >=concat(from_unixtime(unix_timestamp(date_sub(now(), 1)),"yyyy-MM-dd"), ' 00:00:00')
+           AND tc.create_time <concat(from_unixtime(unix_timestamp(now()),"yyyy-MM-dd"), ' 00:00:00'))
+          OR (tc.update_time >=concat(from_unixtime(unix_timestamp(date_sub(now(), 1)),"yyyy-MM-dd"), ' 00:00:00')
+              AND tc.update_time <concat(from_unixtime(unix_timestamp(now()),"yyyy-MM-dd"), ' 00:00:00')))
+     AND tc.associator_level = 2
+     AND tc.white!='QA' ) t_tab ON (bmp.customer_id = t_tab.customer_id);
+
+#增量
+insert INTO gabase.b_member_profile 
+SELECT tc.id AS customer_id,
+        tc.mobilephone,
+        bca.idcard,
+        case when bca.idcard is not null and bca.idcard != '' then strleft(bca.idcard,6) else null end 
+        as birthplace,
+        case when bca.idcard is not null and bca.idcard != '' then strleft(bca.idcard,2) else null end 
+        as born_province,
+        case when bca.idcard is not null and bca.idcard != '' then strleft(bca.idcard,4) else null end 
+        as born_city,
+        case when bca.idcard is not null and bca.idcard != '' then substr(bca.idcard,)(bca.idcard,4) else null end 
+        as born_city,
+        tca.birthday as birthday,
+           bca.opencard_store_id AS regist_storeid,
+           bca.city_no AS regist_cityno,
+           bca.create_time AS opencard_time,
+           tc.associator_expiry_date AS associator_expiry_date,
+           CASE
+               WHEN torp.type IS NOT NULL
+                    AND torp.type != '' THEN torp.type
+               ELSE tcard.type
+           END AS member_type,
+           ext.invitecode AS invitecode,
+           1 AS opencard_count,
+           tmor.mode AS MODE,
+           CASE
+               WHEN tc.associator_expiry_date >now() THEN 0
+               ELSE 1
+           END AS status,
+           cast(now() AS string) AS update_time
+   FROM gemini.t_customer tc
+   LEFT JOIN gabase.b_customer_associator bca ON (tc.id = bca.customer_id)
+   LEFT JOIN gemini_mongo.t_customer_info_record_ext ext ON (ext.customerid = tc.id)
+   LEFT JOIN
+     ( SELECT t.customer_id,
+              t.type
+      FROM
+        (SELECT customer_id,
+                TYPE,
+                ROW_NUMBER() OVER (partition BY customer_id
+                                   ORDER BY create_time DESC) AS rn
+         FROM gemini.t_order_receipts
+         WHERE pay_status ='payed'
+           AND (TYPE = 'associator_start_2'
+                OR TYPE = 'associator_up_2'
+                OR TYPE='plus') ) t
+      WHERE t.rn = 1 ) torp ON (torp.customer_id = tc.id)
+   LEFT JOIN
+     ( SELECT customer_id,
+              MODE
+      FROM
+        ( SELECT customer_id,
+                 MODE,
+                 ROW_NUMBER() OVER (partition BY customer_id
+                                    ORDER BY create_time DESC) AS rn
+         FROM gemini.t_member_operation_record
+         WHERE LEVEL = 2 ) ta
+      WHERE ta.rn = 1 ) tmor ON (tmor.customer_id = tc.id)
+   LEFT JOIN
+     ( SELECT t.customer_id,
+              t.type
+      FROM
+        (SELECT tcard.customer_id,
+                tcard.type,
+                ROW_NUMBER() OVER (partition BY customer_id
+                                   ORDER BY tcard.create_time DESC) AS rn
+         FROM gemini.t_card tcard
+         JOIN gemini.t_exchange_card_batch tbatch ON (tcard.batch_id = tbatch.id)
+         WHERE tcard.customer_id IS NOT NULL ) t
+      WHERE t.rn = 1 ) tcard ON (tcard.customer_id = tc.id)
+   WHERE ((tc.create_time >=concat(from_unixtime(unix_timestamp(date_sub(now(), 1)),"yyyy-MM-dd"), ' 00:00:00')
+           AND tc.create_time <concat(from_unixtime(unix_timestamp(now()),"yyyy-MM-dd"), ' 00:00:00'))
+          OR (tc.update_time >=concat(from_unixtime(unix_timestamp(date_sub(now(), 1)),"yyyy-MM-dd"), ' 00:00:00')
+              AND tc.update_time <concat(from_unixtime(unix_timestamp(now()),"yyyy-MM-dd"), ' 00:00:00')))
+     AND tc.associator_level = 2
+     AND tc.white!='QA'
 
 
 
+
+
+
+
+create table if not exists gabase.b_member_profile(
+	   customer_id string,
+       mobilephone string,
+       idcard string,
+       birthplace string,
+       born_province string,
+       born_city string,
+       birthday string,
+       sex string,
+       regist_time string,
+       associator_level int,
+       customer_source string,
+       white string,
+       regist_storeid string,
+       regist_cityno string,
+       opencard_time string,
+       associator_expiry_date string,
+       isnew_member int,
+       member_type string,
+       invitecode string,
+       opencard_count int,
+       first_opencard_time string,
+       member_origin string,
+       mode string,
+       member_GMV double,
+       member_order_count int,
+       apportion_rebate double,
+       birthday_coupon_use_count int,
+       coupons_25_use_count int,
+       is_get_cardgift int,
+       status int,
+       create_time string,
+       update_time string
+)
 
