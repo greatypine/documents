@@ -21,6 +21,19 @@
 	(
 	    select distinct phone from daqweb.t_humanresources
 	) th on (th.phone = tc.mobilephone)
+	
+	
+	////////////////////////////////////////renmian
+	## 国安社区员工tag：线上员工 t_sync_record，国安侠 t_human_resource
+select * from (
+select vc.id as customer_id, vc.mobilephone, 
+sr.cardid as online, hs.cardnumber as offline, 
+case when sr.cardid is not null then 'online'
+     when hs.cardnumber is not null then 'offline'
+     else 'no' end as is_guoan_employee  from v_full_customer vc left outer join daqweb.t_sync_record sr on vc.mobilephone=sr.phone and (sr.lefttime is null and sr.lefttime='')
+left outer join daqweb.t_humanresources hs on vc.mobilephone=hs.phone and (hs.leavedate is null or hs.leavedate='')
+where mobilephone is not null and mobilephone!=''
+) t where is_guoan_employee!='no'
 
 3. 近360天的消费次数tag (累计消费订单量/订单金额/订单频道/门店数/sku数量)
 insert overwrite s_user_360ds_order_info
