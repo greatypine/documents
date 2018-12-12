@@ -4,26 +4,6 @@
 3）养老餐
 
 2. 国安社区员工tag：
-	线上员工 t_sync_record，
-
-	select tc.id as customer_id
-    from gemini.t_customer tc 
-	left join 
-	(
-	    select distinct phone from daqweb.t_sync_record where phone is not null and phone != ''
-	) t_sync on (tc.mobilephone = t_sync.phone)
-
-	国安侠 t_human_resource
-
-	select tc.id as customer_id
-    from gemini.t_customer tc 
-	left join 
-	(
-	    select distinct phone from daqweb.t_humanresources
-	) th on (th.phone = tc.mobilephone)
-	
-	
-	////////////////////////////////////////renmian
 	## 国安社区员工tag：线上员工 t_sync_record，国安侠 t_human_resource
 select * from (
 select vc.id as customer_id, vc.mobilephone, 
@@ -98,24 +78,50 @@ left join (
 4. 差评tag （差评次数）   --- cum_bad_contents_tot
 
 5. 400消费tag  （消费次数）
-select customer_id from gemini.t_order where order_source = 'callcenter' group by customer_id
+select 
+    customer_id,
+    'order_source_callcenter' as `key`,
+    count(1) as value,
+    current_timestamp() as createdate
+from gemini.t_order where order_source = 'callcenter' group by customer_id
 
 6. 无效用户tag（1,2）----单店单日注册次数（7位电话号码）
 
 7. 过账支付
-select customer_id from gemini.t_order_receipts where pay_platform = 'posting' group by customer_id;
+select 
+    customer_id,
+    'pay_platform_posting' as `key`,
+    '有过账用户' as value,
+    	current_timestamp() as createdate
+from gabase.v_pay_order where pay_platform = 'posting' group by customer_id;
 
 8. 用户单日最大单数，
-	select tor.customer_id,count(1) as count from gemini.t_order tor inner join gemini.t_eshop te on (tor.eshop_id = te.id) where sign_time is not null
-	and to_date(tor.create_time) = from_unixtime(unix_timestamp(date_sub(now(), 1)),"yyyy-MM-dd")
-    group by tor.customer_id having count(1) >10
+	    
+select 
+    tor.customer_id,
+    'pay_order_gt10' as `key`,
+    count(1) as value,
+    current_timestamp() as createdate
+from v_pay_order tor where 
+to_date(tor.create_time) = from_unixtime(unix_timestamp(date_sub(now(), 1)),"yyyy-MM-dd")
+group by tor.customer_id having count(1) >10
+
    最大单日累计金额
-   	select tor.customer_id,sum(tor.trading_price) from gemini.t_order tor inner join gemini.t_eshop te on (tor.eshop_id = te.id) where sign_time is not null
-	and to_date(tor.create_time) = from_unixtime(unix_timestamp(date_sub(now(), 1)),"yyyy-MM-dd")
-	group by tor.customer_id having sum(tor.trading_price) >10000
+select 
+    tor.customer_id,
+    'pay_price_gt10000' as `key`,
+    sum(tor.trading_price) as value,
+    current_timestamp() as createdate
+from v_pay_order tor where to_date(tor.create_time) = from_unixtime(unix_timestamp(date_sub(now(), 1)),"yyyy-MM-dd")
+group by tor.customer_id having sum(tor.trading_price) >10000
 
 9.代客下单用户
-select customer_id from gemini.t_order where order_source = 'store' group by customer_id;
+select  
+    customer_id,
+    'order_source_store' as `key`,
+    count(1) as value,
+    current_timestamp() as createdate 
+from gemini.t_order where order_source = 'store' group by customer_id;
 
 
 10.
