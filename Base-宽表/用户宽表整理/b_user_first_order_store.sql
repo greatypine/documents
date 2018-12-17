@@ -782,3 +782,12 @@ LEFT OUTER JOIN daqweb.tiny_area area ON (area.code = td.code and area.status = 
 WHERE
  e.white != 'QA'
 AND NOT e. NAME LIKE '%测试%'
+
+
+
+
+create view v_pay_order as 
+select tor.*,torp.is_clearing,torp.payment,torp.pay_platform,torp.pay_status,torp.app_pay_succeed,torp.pay_time,torp.pay_source
+from gemini.t_order tor inner join (
+    select *,row_number() over (partition by order_group_id order by create_time desc) as rn from gemini.t_order_receipts
+) torp on (tor.group_id = torp.order_group_id and rn = 1) 
