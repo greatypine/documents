@@ -1,10 +1,12 @@
 ﻿1. 写一个用户与idcard的对应关系表 中间表
-1）社员
-2）线上员工
-3）养老餐
+1）线上员工
+2）国安侠
+3）社员
+4）养老餐
+
 
 2. 国安社区员工tag：
-	## 国安社区员工tag：线上员工 t_sync_record，国安侠 t_human_resource
+	## 国安社区员工tag：线上员工 t_sync_record（staff），国安侠 t_human_resource(guoanxia)   t_customer_info_ext(assocaiator), c_customer(yanglaocan)
 select * from (
 select vc.id as customer_id, vc.mobilephone, 
 sr.cardid as online, hs.cardnumber as offline, 
