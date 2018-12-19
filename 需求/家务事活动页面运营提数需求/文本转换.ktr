@@ -439,12 +439,17 @@
     <hop>
       <from>CSV&#x6587;&#x4ef6;&#x8f93;&#x5165;</from>
       <to>Microsoft Excel &#x8f93;&#x51fa;</to>
-      <enabled>Y</enabled>
+      <enabled>N</enabled>
     </hop>
     <hop>
       <from>CSV&#x6587;&#x4ef6;&#x8f93;&#x5165;-pro-upv</from>
       <to>Microsoft Excel &#x8f93;&#x51fa; 2</to>
       <enabled>N</enabled>
+    </hop>
+    <hop>
+      <from>CSV&#x6587;&#x4ef6;&#x8f93;&#x5165;-&#x5916;&#x547c;</from>
+      <to>Microsoft Excel &#x8f93;&#x51fa; 3</to>
+      <enabled>Y</enabled>
     </hop>
   </order>
   <step>
@@ -776,6 +781,90 @@
     <GUI>
       <xloc>336</xloc>
       <yloc>416</yloc>
+      <draw>Y</draw>
+    </GUI>
+    </step>
+
+  <step>
+    <name>CSV&#x6587;&#x4ef6;&#x8f93;&#x5165;-&#x5916;&#x547c;</name>
+    <type>CsvInput</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <filename>E&#x3a;&#x5c;guoan&#x5c;datacenter&#x5c;documents&#x5c;&#x9700;&#x6c42;&#x5c;&#x56fd;&#x5b89;&#x91d1;&#x8d85;&#x5916;&#x547c;&#x63d0;&#x6570;&#x9700;&#x6c42;&#x5c;o_waihu_user_list_2018_result.csv</filename>
+    <filename_field/>
+    <rownum_field/>
+    <include_filename>N</include_filename>
+    <separator>	</separator>
+    <enclosure/>
+    <header>N</header>
+    <buffer_size>50000</buffer_size>
+    <lazy_conversion>Y</lazy_conversion>
+    <add_filename_result>N</add_filename_result>
+    <parallel>N</parallel>
+    <newline_possible>N</newline_possible>
+    <encoding>UTF-8</encoding>
+    <fields>
+      <field>
+        <name>Field_000</name>
+        <type>String</type>
+        <format>&#x23;</format>
+        <currency>&#xffe5;</currency>
+        <decimal>.</decimal>
+        <group>,</group>
+        <length>15</length>
+        <precision>0</precision>
+        <trim_type>none</trim_type>
+      </field>
+      <field>
+        <name>Field_001</name>
+        <type>String</type>
+        <format/>
+        <currency>&#xffe5;</currency>
+        <decimal>.</decimal>
+        <group>,</group>
+        <length>1</length>
+        <precision>-1</precision>
+        <trim_type>none</trim_type>
+      </field>
+      <field>
+        <name>Field_002</name>
+        <type>String</type>
+        <format/>
+        <currency>&#xffe5;</currency>
+        <decimal>.</decimal>
+        <group>,</group>
+        <length>4</length>
+        <precision>-1</precision>
+        <trim_type>none</trim_type>
+      </field>
+      <field>
+        <name>Field_003</name>
+        <type>String</type>
+        <format/>
+        <currency>&#xffe5;</currency>
+        <decimal>.</decimal>
+        <group>,</group>
+        <length>87</length>
+        <precision>-1</precision>
+        <trim_type>none</trim_type>
+      </field>
+    </fields>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>320</xloc>
+      <yloc>576</yloc>
       <draw>Y</draw>
     </GUI>
     </step>
@@ -1184,6 +1273,120 @@
     <GUI>
       <xloc>608</xloc>
       <yloc>416</yloc>
+      <draw>Y</draw>
+    </GUI>
+    </step>
+
+  <step>
+    <name>Microsoft Excel &#x8f93;&#x51fa; 3</name>
+    <type>TypeExitExcelWriterStep</type>
+    <description/>
+    <distribute>Y</distribute>
+    <custom_distribution/>
+    <copies>1</copies>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
+    <header>Y</header>
+    <footer>N</footer>
+    <makeSheetActive>Y</makeSheetActive>
+    <rowWritingMethod>overwrite</rowWritingMethod>
+    <startingCell>A1</startingCell>
+    <appendOmitHeader>N</appendOmitHeader>
+    <appendOffset>0</appendOffset>
+    <appendEmpty>0</appendEmpty>
+    <rowWritingMethod>overwrite</rowWritingMethod>
+    <forceFormulaRecalculation>N</forceFormulaRecalculation>
+    <leaveExistingStylesUnchanged>N</leaveExistingStylesUnchanged>
+    <appendLines>N</appendLines>
+    <add_to_result_filenames>Y</add_to_result_filenames>
+    <file>
+      <name>E&#x3a;&#x5c;guoan&#x5c;datacenter&#x5c;documents&#x5c;&#x9700;&#x6c42;&#x5c;&#x56fd;&#x5b89;&#x91d1;&#x8d85;&#x5916;&#x547c;&#x63d0;&#x6570;&#x9700;&#x6c42;&#x5c;&#x5916;&#x547c;&#x540d;&#x5355;</name>
+      <extention>xls</extention>
+      <do_not_open_newfile_init>N</do_not_open_newfile_init>
+      <split>N</split>
+      <add_date>N</add_date>
+      <add_time>N</add_time>
+      <SpecifyFormat>N</SpecifyFormat>
+      <date_time_format/>
+      <sheetname>Sheet1</sheetname>
+      <autosizecolums>N</autosizecolums>
+      <stream_data>N</stream_data>
+      <protect_sheet>N</protect_sheet>
+      <password>Encrypted </password>
+      <protected_by/>
+      <splitevery>0</splitevery>
+      <if_file_exists>new</if_file_exists>
+      <if_sheet_exists>new</if_sheet_exists>
+      </file>
+    <template>
+      <enabled>N</enabled>
+      <sheet_enabled>N</sheet_enabled>
+      <filename>template.xls</filename>
+      <sheetname/>
+      <hidden>N</hidden>
+    </template>
+    <fields>
+      <field>
+        <name>Field_000</name>
+        <type>String</type>
+        <format/>
+        <title>&#x7535;&#x8bdd;&#x53f7;&#x7801;</title>
+        <titleStyleCell/>
+        <styleCell/>
+        <commentField/>
+        <commentAuthorField/>
+        <formula>N</formula>
+        <hyperlinkField/>
+      </field>
+      <field>
+        <name>Field_001</name>
+        <type>String</type>
+        <format/>
+        <title>&#x6027;&#x522b;</title>
+        <titleStyleCell/>
+        <styleCell/>
+        <commentField/>
+        <commentAuthorField/>
+        <formula>N</formula>
+        <hyperlinkField/>
+      </field>
+      <field>
+        <name>Field_002</name>
+        <type>String</type>
+        <format/>
+        <title>&#x57ce;&#x5e02;</title>
+        <titleStyleCell/>
+        <styleCell/>
+        <commentField/>
+        <commentAuthorField/>
+        <formula>N</formula>
+        <hyperlinkField/>
+      </field>
+      <field>
+        <name>Field_003</name>
+        <type>String</type>
+        <format/>
+        <title>&#x7528;&#x6237;&#x6807;&#x7b7e;</title>
+        <titleStyleCell/>
+        <styleCell/>
+        <commentField/>
+        <commentAuthorField/>
+        <formula>N</formula>
+        <hyperlinkField/>
+      </field>
+    </fields>
+    <cluster_schema/>
+    <remotesteps>
+      <input>
+      </input>
+      <output>
+      </output>
+    </remotesteps>
+    <GUI>
+      <xloc>640</xloc>
+      <yloc>576</yloc>
       <draw>Y</draw>
     </GUI>
     </step>
