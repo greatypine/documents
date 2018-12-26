@@ -1,0 +1,76 @@
+drop table if exists temp_jiawushi_shuang12_order_detail;
+create table if not exists temp_jiawushi_shuang12_order_detail(
+request_date	string	
+,store_id	string	
+,store_name	string	
+,customer_id	string	
+,order_create_time	string	
+,request_time	string	
+,order_status	string	
+,eshop_id	string	
+,eshop_name	string	
+,dcc_name	string	
+,payable_price	double	
+,trading_price	double	
+,content_price	double	
+,sign_time	string
+,order_id string 
+,eshop_pro_id string
+,eshop_pro_name string
+)ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' STORED AS TEXTFILE;
+insert overwrite temp_jiawushi_shuang12_order_detail
+select jiawushiorder.*, toi.eshop_pro_id, toi.eshop_pro_name from 
+(select log.request_date, tor.store_id, tor.store_name,  tor.customer_id, tor.order_create_time, log.request_time, tor.order_status,  
+tor.eshop_id, tor.eshop_name, tor.dcc_name,
+tor.payable_price, tor.trading_price, cc.content_price, tor.sign_time, tor.order_id
+from gabase.v_full_order as tor inner join (
+select request_date, store_id, customer_id, min(request_time) as request_time from gabdp_log.t_log where task='getexhibition' and body like '%jiawushi_shuang12%' --and request_date='2018-12-12'
+and customer_id != 'null' group by store_id, customer_id, request_date) as log 
+on  to_date(tor.order_create_time)=log.request_date and tor.customer_id=log.customer_id and tor.store_id=log.store_id
+left join gemini.t_order_group as og on og.id = tor.order_group_id
+	left join gemini.t_card_coupon as cc on og.card_coupon_id = cc.id
+where  order_source='app' and from_unixtime(unix_timestamp(tor.order_create_time), 'HH:mm:ss') >=log.request_time
+) as jiawushiorder left join gemini.t_order_item toi on jiawushiorder.order_id=toi.order_id
+order by jiawushiorder.request_date, jiawushiorder.store_id;
+
+
+
+select request_date, store_id, customer_id, count(1) from t_log where task='getexhibition' and body like '%jiawushi_shuang12%' --and request_date='2018-12-12'
+and customer_id != 'null' group by store_id, customer_id, request_date order by request_date, store_id
+
+select request_date, count(distinct customer_id) as uv, count(1) as pv from t_log where task='getexhibition' and body like '%jiawushi_shuang12%' --and request_date='2018-12-12'
+-- and customer_id != 'null' 
+group by  request_date order by request_date
+
+
+--商品PV
+
+--select * from gemini.t_product where content_name like '%计时保洁（3小时起）%'
+'5d9b4f30dde31a4a3d7f0c29baeb5b7c',
+'4cc2a42333c97f5bb7057932d62597e8',
+'64df078f44107a73ec58443bc70d3cfc',
+'ccc7387d81b5f340c60569297abd7b49',
+'1363946bc58099437968c55aca064c6d',
+'1f916d2ace5de76f81b25147ddb08983',
+'43f75f30bac87d6def9de302d674391e',
+'5353549b7615962771f152d3abb168de',
+'75404bc24cd474eda9b74506177e9e8f'
+select * from gabdp_log.t_log where task='proinfo' limit 10;
+
+
+select log.*, tp.content_name from (
+select request_date, platform, body as proid, count(distinct customer_id) as uv, count(1) as pv from gabdp_log.m_log 
+where task='proinfo' and body in ('5d9b4f30dde31a4a3d7f0c29baeb5b7c',
+'4cc2a42333c97f5bb7057932d62597e8',
+'64df078f44107a73ec58443bc70d3cfc',
+'ccc7387d81b5f340c60569297abd7b49',
+'1363946bc58099437968c55aca064c6d',
+'1f916d2ace5de76f81b25147ddb08983',
+'43f75f30bac87d6def9de302d674391e',
+'5353549b7615962771f152d3abb168de',
+'75404bc24cd474eda9b74506177e9e8f') and request_date >= '2018-12-07'
+group by  request_date, platform, body 
+) as log left join gemini.t_product tp on log.proid=tp.id
+order by request_date
+
+
