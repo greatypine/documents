@@ -15,7 +15,11 @@ create table b_user_first_order_store(
 	employee_no string,
 	trading_price double,
 	item_count int,
+	channel_id string,
 	channel_name string,
+	department_id string,
+	department_name string,
+	sign_time string,
 	latitude double,
 	longitude double,
 	create_time string,
@@ -23,34 +27,125 @@ create table b_user_first_order_store(
 )
 
 
-#用户首次消费门店表历史记录清洗
+delete from b_user_first_order_store;
+select count(*) from b_user_first_order_store;
+--初始化历史数据
 insert into gabase.b_user_first_order_store
 select 
 tmpcusline.customer_id,
-tc.mobilephone as customer_phone,
 tmpcusline.store_id,
+tc.mobilephone as customer_phone,
 ts.`code` as storeno,
 tor2.eshop_id as eshop_id,
 ts.city_code as cityno,
 a.`name` as city_name,
-case when tor2.code is not null and tor2.code != '' then tarea.area_no else dmom.area_code end as area_code,
-case when tor2.code is not null and tor2.code != '' then tor2.code else dmom.info_village_code end as tiny_village_code,
-case when tor2.code is not null and tor2.code != '' then tor2.employee_a_no else dmom.info_employee_a_no end as employee_a_no,
-tmpcusline.order_sn,
+tarea.area_no as area_code,
+tor2.code as tiny_village_code,
+tor2.employee_a_no as employee_a_no,
+tor2.order_sn,
 tmpcusline.first_order_time,
 tor2.employee_no as employee_no,
 tor2.trading_price as trading_price,
 tor2.total_quantity as item_count,
+tor2.channel_id as channel_id,
 tor2.channel_name as channel_name,
+tor2.department_id as department_id,
+tor2.department_name as department_name,
+tor2.sign_time,
 taddr.latitude,
 taddr.longitude,
 cast(now() as string) as create_time,
 cast(now() as string) as update_time
 from (
-    select customer_id,store_id,min(order_sn) as order_sn,min(create_time) as first_order_time from (
+    select customer_id,store_id,min(create_time) as first_order_time from (
     	select
     	tor.customer_id ,
-    	tor.store_id ,
+    	ifnull(tor.normal_store_id,tor.store_id) as store_id,
+    	tor.order_sn ,
+    	tor.create_time
+    	from gemini.t_order tor
+    	join gemini.t_eshop te on (tor.eshop_id = te.id)
+    	where te.`name` NOT LIKE '%测试%' AND te.white!='QA' and tor.sign_time is not null and tor.sign_time <concat(from_unixtime(unix_timestamp(now()),"yyyy-MM-dd"), ' 00:00:00')
+	) unitor group by customer_id,store_id
+) tmpcusline
+join gemini.t_store ts on (tmpcusline.store_id = ts.id)
+left join gemini.t_sys_area a on (ts.city_code = a.code and a.level = 2)
+left join gemini.t_customer tc on (tmpcusline.customer_id = tc.id)
+LEFT JOIN (	
+    select *,row_number() over (partition by customer_id,store_id order by create_time asc,sign_time asc) as rn
+    from (
+    	select tor.id,
+    	tor.total_quantity,
+    	tor.trading_price,
+    	tor.customer_id,
+    	ifnull(tor.normal_store_id,tor.store_id) as store_id,
+    	tor.eshop_id,
+    	tor.order_sn,
+    	tor.create_time,
+    	tor.sign_time,
+    	ts.city_code,
+    	tdc.id as channel_id,
+    	tdc.name as channel_name,
+    	tcc.id as department_id,
+    	tcc.name as department_name,
+    	tor.order_address_id,
+    	ifnull(td.code,new.tiny_village_code) as code,
+    	td.employee_a_no,
+    	tem.code as employee_no
+    	from gemini.t_order tor 
+    	join gemini.t_eshop te on (tor.eshop_id = te.id)
+    	LEFT JOIN gemini.t_store ts ON (ts.id = ifnull(tor.normal_store_id,tor.store_id))
+    	LEFT JOIN gemini.t_department_channel tdc ON (te.channel_id = tdc.id)
+    	LEFT JOIN gemini.t_department_channel tcc ON (te.bussiness_group_id = tcc.id)
+    	LEFT JOIN gemini_mongo.tiny_dispatch td ON (td.orderid = tor.id)
+    	LEFT JOIN gemini.t_employee tem ON (tem.id = tor.employee_id)
+    	LEFT JOIN daqweb.df_customer_order_month_trade_new new ON (new.order_sn = tor.order_sn)
+    	where tor.sign_time is not null and tor.sign_time <concat(from_unixtime(unix_timestamp(now()),"yyyy-MM-dd"), ' 00:00:00')
+	) t1 
+) tor2 on (tor2.customer_id = tmpcusline.customer_id and tor2.store_id = tmpcusline.store_id and tor2.create_time = tmpcusline.first_order_time and tor2.rn = 1)
+LEFT JOIN gemini.t_order_address taddr ON (tor2.order_address_id = taddr.id)
+LEFT JOIN daqweb.tiny_area tarea ON (tarea.code = tor2.code and tarea.status = 0);
+
+CREATE TABLE gabase.b_user_first_order_store_1 PRIMARY KEY (customer_id,store_id)  PARTITION BY HASH(customer_id) PARTITIONS  15 STORED AS KUDU  AS SELECT * FROM gabase.b_user_first_order_store;
+
+ALTER TABLE gabase.b_user_first_order_store RENAME TO gabase.b_user_first_order_store_2;
+ALTER TABLE gabase.b_user_first_order_store_1 RENAME TO gabase.b_user_first_order_store;
+
+--更新小区为空的历史数据
+upsert into b_user_first_order_store
+(
+    customer_id,
+    store_id,
+    area_code,
+    tiny_village_code,
+    employee_a_no,
+    update_time
+)
+select 
+    butm.customer_id,
+    butm.store_id,
+    butm.area_code,
+    butm.tiny_village_code,
+    butm.employee_a_no,
+    butm.update_time
+from b_user_first_order_store buf inner join 
+(
+select
+    t1.customer_id,
+    t1.store_id,
+    tarea.area_no as area_code,
+    tor2.code as tiny_village_code,
+    tor2.employee_a_no  as employee_a_no,
+    cast(now() as string) as update_time
+    from 
+(
+    select customer_id,store_id from b_user_first_order_store where tiny_village_code is null or tiny_village_code = ''
+) t1 inner join 
+(
+    select customer_id,store_id,min(create_time) as first_order_time from (
+    	select
+    	tor.customer_id ,
+    	ifnull(tor.normal_store_id,tor.store_id) as store_id,
     	tor.order_sn ,
     	tor.create_time
     	from gemini.t_order tor
@@ -60,7 +155,7 @@ from (
     	union
     	select
     	tor.customer_id ,
-    	tor.store_id ,
+    	ifnull(tor.normal_store_id,tor.store_id) as store_id,
     	tor.order_sn,
     	tor.create_time
     	from gemini.t_order tor
@@ -68,144 +163,274 @@ from (
     	join daqweb.df_customer_order_month_trade_new td ON (td.order_sn = tor.order_sn)
     	where td.tiny_village_code is not null and td.tiny_village_code != '' and te.`name` NOT LIKE '%测试%' AND te.white!='QA' and tor.sign_time is not null and tor.sign_time <concat(from_unixtime(unix_timestamp(now()),"yyyy-MM-dd"), ' 00:00:00')
 	) unitor group by customer_id,store_id
-) tmpcusline
-join gemini.t_store ts on (tmpcusline.store_id = ts.id)
-left join gemini.t_sys_area a on (ts.city_code = a.code and a.level = 2)
-left join gemini.t_customer tc on (tmpcusline.customer_id = tc.id)
+) tmpcusline on (t1.customer_id = tmpcusline.customer_id and t1.store_id = tmpcusline.store_id)
 LEFT JOIN (	
-	select tor.id,
-	tor.total_quantity,
-	tor.trading_price,
-	tor.store_id,
-	tor.eshop_id,
-	tor.order_sn,
-	ts.city_code,
-	tdc.name as channel_name,
-	tor.order_address_id,
-	ifnull(td.code,new.tiny_village_code) as code,
-	td.employee_a_no,
-	tem.code as employee_no
-	from gemini.t_order tor 
-	join gemini.t_eshop te on (tor.eshop_id = te.id)
-	LEFT JOIN gemini.t_store ts ON (ts.id = tor.store_id)
-	LEFT JOIN gemini.t_department_channel tdc ON (te.channel_id = tdc.id)
-	LEFT JOIN gemini_mongo.tiny_dispatch td ON (td.orderid = tor.id)
-	LEFT JOIN gemini.t_employee tem ON (tem.id = tor.employee_id)
-	LEFT JOIN daqweb.df_customer_order_month_trade_new new ON (new.order_sn = tor.order_sn)
-) tor2 on (tor2.order_sn = tmpcusline.order_sn)
-LEFT JOIN gemini.t_order_address taddr ON (tor2.order_address_id = taddr.id)
+	select *,row_number() over (partition by customer_id,store_id order by create_time asc,sign_time asc) as rn
+    from (
+    	select tor.id,
+    	tor.total_quantity,
+    	tor.trading_price,
+    	tor.customer_id,
+    	ifnull(tor.normal_store_id,tor.store_id) as store_id,
+    	tor.eshop_id,
+    	tor.order_sn,
+    	tor.create_time,
+    	tor.sign_time,
+    	ts.city_code,
+    	tdc.id as channel_id,
+    	tdc.name as channel_name,
+    	tcc.id as department_id,
+    	tcc.name as department_name,
+    	tor.order_address_id,
+    	ifnull(td.code,new.tiny_village_code) as code,
+    	td.employee_a_no,
+    	tem.code as employee_no
+    	from gemini.t_order tor 
+    	join gemini.t_eshop te on (tor.eshop_id = te.id)
+    	LEFT JOIN gemini.t_store ts ON (ts.id = ifnull(tor.normal_store_id,tor.store_id))
+    	LEFT JOIN gemini.t_department_channel tdc ON (te.channel_id = tdc.id)
+    	LEFT JOIN gemini.t_department_channel tcc ON (te.bussiness_group_id = tcc.id)
+    	LEFT JOIN gemini_mongo.tiny_dispatch td ON (td.orderid = tor.id)
+    	LEFT JOIN gemini.t_employee tem ON (tem.id = tor.employee_id)
+    	LEFT JOIN daqweb.df_customer_order_month_trade_new new ON (new.order_sn = tor.order_sn)
+    	where tor.sign_time is not null and tor.sign_time <concat(from_unixtime(unix_timestamp(now()),"yyyy-MM-dd"), ' 00:00:00')
+	) t1 
+) tor2 on (tor2.customer_id = tmpcusline.customer_id and tor2.store_id = tmpcusline.store_id and tor2.create_time = tmpcusline.first_order_time and tor2.rn = 1)
 LEFT JOIN daqweb.tiny_area tarea ON (tarea.code = tor2.code and tarea.status = 0)
-LEFT JOIN daqweb.df_mass_order_monthly dmom ON (dmom.order_sn = tmpcusline.order_sn);
+) butm on (buf.customer_id = butm.customer_id and buf.store_id = butm.store_id);
+
+--更新channel_id为空的历史数据
+
+upsert into b_user_first_order_store
+(
+    customer_id,
+    store_id,
+    channel_id,
+    channel_name,
+    department_id,
+    department_name,
+    update_time
+)
+select buf.customer_id,
+    buf.store_id,
+    t.channel_id,
+    t.channel_name,
+    t.department_id,
+    t.department_name,
+    cast(now() as string) as update_time
+    from b_user_first_order_store buf inner join 
+(
+    select tmp.*,
+        row_number() over (partition by tmp.customer_id,tmp.store_id order by tmp.create_time asc, tmp.sign_time asc) as rn
+     from (
+    	select 
+    		tor.customer_id,
+    		ifnull(tor.normal_store_id,tor.store_id) as store_id,
+    		tor.sign_time,
+    		tor.create_time,
+    		tdc.id as channel_id,
+    		tdc.name as channel_name,
+    		tcc.id as department_id,
+    		tcc.name as department_name
+    	from gemini.t_order tor 
+    	left join gemini.t_eshop te on (tor.eshop_id = te.id)
+    	LEFT JOIN gemini.t_store ts ON (ts.id = tor.store_id)
+    	LEFT JOIN gemini.t_department_channel tdc ON (te.channel_id = tdc.id)
+    	LEFT JOIN gemini.t_department_channel tcc ON (te.bussiness_group_id = tcc.id)
+    	where tor.sign_time is not null and tor.sign_time <concat(from_unixtime(unix_timestamp(now()),"yyyy-MM-dd"), ' 00:00:00') 
+    	and te.channel_id is not null and te.bussiness_group_id is not null 
+    ) tmp
+) t on (buf.customer_id = t.customer_id and buf.store_id = t.store_id)
+where buf.channel_id is null and t.rn = 1 
 
 
 
-#当天数据的清洗
-insert into gabase.b_user_first_order_store_tmp
+--每日插入数据hql
+insert into b_user_first_order_store
 select 
 tmpcusline.customer_id,
-tc.mobilephone as customer_phone,
 tmpcusline.store_id,
+tc.mobilephone as customer_phone,
 ts.`code` as storeno,
 tor2.eshop_id as eshop_id,
 ts.city_code as cityno,
 a.`name` as city_name,
-case when tor2.code is not null and tor2.code != '' then tarea.area_no else dmom.area_code end as area_code,
-case when tor2.code is not null and tor2.code != '' then tor2.code else dmom.info_village_code end as tiny_village_code,
-case when tor2.code is not null and tor2.code != '' then tor2.employee_a_no else dmom.info_employee_a_no end as employee_a_no,
-tmpcusline.order_sn,
+tarea.area_no as area_code,
+tor2.code as tiny_village_code,
+tor2.employee_a_no as employee_a_no,
+tor2.order_sn,
 tmpcusline.first_order_time,
 tor2.employee_no as employee_no,
 tor2.trading_price as trading_price,
 tor2.total_quantity as item_count,
+tor2.channel_id as channel_id,
 tor2.channel_name as channel_name,
+tor2.department_id as department_id,
+tor2.department_name as department_name,
+tor2.sign_time as sign_time,
 taddr.latitude,
 taddr.longitude,
 cast(now() as string) as create_time,
 cast(now() as string) as update_time
 from (
-	select
-	tor.customer_id ,
-	tor.store_id ,
-	min(tor.order_sn) as order_sn ,
-	min(tor.create_time) as first_order_time
-	from gemini.t_order tor
-	join gemini.t_eshop te on (tor.eshop_id = te.id)
-	left join daqweb.df_mass_order_daily daily on (daily.order_sn = tor.order_sn)
-	where daily.info_village_code is not null and daily.info_village_code != '' and te.`name` NOT LIKE '%测试%' AND te.white!='QA' and tor.sign_time is not null 
-	and tor.sign_time >= concat(from_unixtime(unix_timestamp(date_sub(now(), 1)),"yyyy-MM-dd"), ' 00:00:00')
-    AND tor.sign_time < concat(from_unixtime(unix_timestamp(now()),"yyyy-MM-dd"), ' 00:00:00')
-	group by tor.customer_id ,tor.store_id 
+    select 	
+        customer_id ,
+    	store_id,
+    	min(create_time) as first_order_time 
+    from (
+    	select
+    	tor.customer_id ,
+    	ifnull(tor.normal_store_id,store_id) as store_id,
+    	tor.order_sn ,
+    	tor.create_time
+    	from gemini.t_order tor
+    	join gemini.t_eshop te on (tor.eshop_id = te.id)
+    	where te.`name` NOT LIKE '%测试%' AND te.white!='QA' and tor.sign_time is not null 
+    	and tor.sign_time >= concat(from_unixtime(unix_timestamp(date_sub(now(), 1)),"yyyy-MM-dd"), ' 00:00:00')
+        AND tor.sign_time < concat(from_unixtime(unix_timestamp(now()),"yyyy-MM-dd"), ' 00:00:00')
+    ) m group by customer_id,store_id 
 ) tmpcusline
 join gemini.t_store ts on (tmpcusline.store_id = ts.id)
 left join gemini.t_sys_area a on (ts.city_code = a.code and a.level = 2)
 left join gemini.t_customer tc on (tmpcusline.customer_id = tc.id)
 LEFT JOIN (	
-	select tor.id,tor.total_quantity,tor.trading_price,tor.store_id,tor.eshop_id,tor.order_sn,ts.city_code,tdc.name as channel_name,tor.order_address_id,td.code,td.employee_a_no,tem.code as employee_no
-	from gemini.t_order tor 
-	join gemini.t_eshop te on (tor.eshop_id = te.id)
-	LEFT JOIN gemini.t_store ts ON (ts.id = tor.store_id)
-	LEFT JOIN gemini.t_department_channel tdc ON (te.channel_id = tdc.id)
-	LEFT JOIN gemini_mongo.tiny_dispatch td ON (td.orderid = tor.id)
-	LEFT JOIN gemini.t_employee tem ON (tem.id = tor.employee_id)
-) tor2 on (tor2.order_sn = tmpcusline.order_sn)
+    select *,row_number() over (partition by customer_id,store_id order by create_time asc,sign_time asc) as rn
+    from (
+    	select tor.id,
+    	tor.total_quantity,
+    	tor.trading_price,
+    	tor.customer_id,
+    	ifnull(tor.normal_store_id,tor.store_id) as store_id,
+    	tor.eshop_id,
+    	tor.order_sn,
+    	tor.create_time,
+    	tor.sign_time,
+    	ts.city_code,
+    	tdc.id as channel_id,
+    	tdc.name as channel_name,
+    	tcc.id as department_id,
+    	tcc.name as department_name,
+    	tor.order_address_id,
+    	ifnull(td.code,new.tiny_village_code) as code,
+    	td.employee_a_no,
+    	tem.code as employee_no
+    	from gemini.t_order tor 
+    	join gemini.t_eshop te on (tor.eshop_id = te.id)
+    	LEFT JOIN gemini.t_store ts ON (ts.id = ifnull(tor.normal_store_id,tor.store_id))
+    	LEFT JOIN gemini.t_department_channel tdc ON (te.channel_id = tdc.id)
+    	LEFT JOIN gemini.t_department_channel tcc ON (te.bussiness_group_id = tcc.id)
+    	LEFT JOIN gemini_mongo.tiny_dispatch td ON (td.orderid = tor.id)
+    	LEFT JOIN gemini.t_employee tem ON (tem.id = tor.employee_id)
+    	LEFT JOIN daqweb.df_customer_order_month_trade_new new ON (new.order_sn = tor.order_sn)
+    	where tor.sign_time is not null 
+        and tor.sign_time >= concat(from_unixtime(unix_timestamp(date_sub(now(), 1)),"yyyy-MM-dd"), ' 00:00:00')
+        AND tor.sign_time < concat(from_unixtime(unix_timestamp(now()),"yyyy-MM-dd"), ' 00:00:00')
+	) t1 
+) tor2 on (tor2.customer_id = tmpcusline.customer_id and tor2.store_id = tmpcusline.store_id and tor2.create_time = tmpcusline.first_order_time and tor2.rn = 1)
 LEFT JOIN gemini.t_order_address taddr ON (tor2.order_address_id = taddr.id)
 LEFT JOIN daqweb.tiny_area tarea ON (tarea.code = tor2.code and tarea.status = 0)
-LEFT JOIN daqweb.df_mass_order_daily dmom ON (dmom.order_sn = tmpcusline.order_sn);
+where concat(tmpcusline.customer_id,tmpcusline.store_id) not in (select concat(customer_id,store_id) from b_user_first_order_store)
+;
 
+--更新小区坐标为空的用户
+upsert into b_user_first_order_store 
+(
+    customer_id,
+    store_id,
+    area_code,
+    tiny_village_code,
+    employee_a_no,
+    update_time
+)
+select buf.customer_id,buf.store_id,tiny.area_code,tiny.tiny_village_code,tiny.employee_a_no,tiny.update_time from b_user_first_order_store buf 
+inner join (
+    select 
+    tor2.customer_id,
+    tor2.store_id,
+    tarea.area_no as area_code,
+    tor2.code as tiny_village_code,
+    tor2.employee_a_no as employee_a_no,
+    cast(now() as string) as update_time
+    from (	
+    select *,row_number() over (partition by customer_id,store_id order by create_time asc,sign_time asc) as rn
+        from (
+        	select
+        	tor.customer_id,
+        	ifnull(tor.normal_store_id,tor.store_id) as store_id,
+        	tor.create_time,
+        	tor.sign_time,
+        	tor.order_address_id,
+        	td.code,
+        	td.employee_a_no
+        	from gemini.t_order tor 
+        	join gemini.t_eshop te on (tor.eshop_id = te.id)
+        	LEFT JOIN gemini.t_store ts ON (ts.id = ifnull(tor.normal_store_id,tor.store_id))
+        	LEFT JOIN gemini_mongo.tiny_dispatch td ON (td.orderid = tor.id)
+        	where tor.sign_time is not null 
+            and tor.sign_time >= concat(from_unixtime(unix_timestamp(date_sub(now(), 1)),"yyyy-MM-dd"), ' 00:00:00')
+            AND tor.sign_time < concat(from_unixtime(unix_timestamp(now()),"yyyy-MM-dd"), ' 00:00:00')
+    	) t1 
+    ) tor2
+    LEFT JOIN daqweb.tiny_area tarea ON (tarea.code = tor2.code and tarea.status = 0)
+    where tor2.rn =1 and tor2.code is not null and concat(tor2.customer_id,tor2.store_id) in (select concat(customer_id,store_id) from b_user_first_order_store where tiny_village_code is null or tiny_village_code = '')
+) tiny on (buf.customer_id = tiny.customer_id and buf.store_id = tiny.store_id)
 
-#当天数据清洗失败时第二天可同样执行当天数据的清洗sql清洗数据；
-#如有两天数据清洗失败执行；
-insert into gabase.b_user_first_order_store_tmp
+--更新频道为空的用户
+upsert into b_user_first_order_store 
+(
+    customer_id,
+    store_id,
+    channel_id,
+    channel_name,
+    department_id,
+    department_name,
+    update_time
+)
+select buf.customer_id,
+    buf.store_id,
+    channel.channel_id,
+    channel.channel_name,
+    channel.department_id,
+    channel.department_name,
+    channel.update_time
+from b_user_first_order_store buf 
+inner join (
 select 
-tmpcusline.customer_id,
-tc.mobilephone as customer_phone,
-tmpcusline.store_id,
-ts.`code` as storeno,
-tor2.eshop_id as eshop_id,
-ts.city_code as cityno,
-a.`name` as city_name,
-case when tor2.code is not null and tor2.code != '' then tarea.area_no else dmom.area_code end as area_code,
-case when tor2.code is not null and tor2.code != '' then tor2.code else dmom.info_village_code end as tiny_village_code,
-case when tor2.code is not null and tor2.code != '' then tor2.employee_a_no else dmom.info_employee_a_no end as employee_a_no,
-tmpcusline.order_sn,
-tmpcusline.first_order_time,
-tor2.employee_no as employee_no,
-tor2.trading_price as trading_price,
-tor2.total_quantity as item_count,
-tor2.channel_name as channel_name,
-taddr.latitude,
-taddr.longitude,
-cast(now() as string) as create_time,
+tor2.customer_id,
+tor2.store_id,
+tor2.channel_id,
+tor2.channel_name,
+tor2.department_id,
+tor2.department_name,
 cast(now() as string) as update_time
-from (
-	select
-	tor.customer_id ,
-	tor.store_id ,
-	min(tor.order_sn) as order_sn ,
-	min(tor.create_time) as first_order_time
-	from gemini.t_order tor
-	join gemini.t_eshop te on (tor.eshop_id = te.id)
-	left join daqweb.df_mass_order_monthly daily on (daily.order_sn = tor.order_sn)
-	where daily.info_village_code is not null and daily.info_village_code != '' and te.`name` NOT LIKE '%测试%' AND te.white!='QA' and tor.sign_time is not null 
-	and tor.sign_time >= concat(from_unixtime(unix_timestamp(date_sub(now(), 1)),"yyyy-MM-dd"), ' 00:00:00')
-    AND tor.sign_time < concat(from_unixtime(unix_timestamp(now()),"yyyy-MM-dd"), ' 00:00:00')
-	group by tor.customer_id ,tor.store_id 
-) tmpcusline
-join gemini.t_store ts on (tmpcusline.store_id = ts.id)
-left join gemini.t_sys_area a on (ts.city_code = a.code and a.level = 2)
-left join gemini.t_customer tc on (tmpcusline.customer_id = tc.id)
-LEFT JOIN (	
-	select tor.id,tor.total_quantity,tor.trading_price,tor.store_id,tor.eshop_id,tor.order_sn,ts.city_code,tdc.name as channel_name,tor.order_address_id,td.code,td.employee_a_no,tem.code as employee_no
-	from gemini.t_order tor 
-	join gemini.t_eshop te on (tor.eshop_id = te.id)
-	LEFT JOIN gemini.t_store ts ON (ts.id = tor.store_id)
-	LEFT JOIN gemini.t_department_channel tdc ON (te.channel_id = tdc.id)
-	LEFT JOIN gemini_mongo.tiny_dispatch td ON (td.orderid = tor.id)
-	LEFT JOIN gemini.t_employee tem ON (tem.id = tor.employee_id)
-) tor2 on (tor2.order_sn = tmpcusline.order_sn)
-LEFT JOIN gemini.t_order_address taddr ON (tor2.order_address_id = taddr.id)
-LEFT JOIN daqweb.tiny_area tarea ON (tarea.code = tor2.code and tarea.status = 0)
-LEFT JOIN daqweb.df_mass_order_monthly dmom ON (dmom.order_sn = tmpcusline.order_sn);
+from (	
+select *,row_number() over (partition by customer_id,store_id order by create_time asc,sign_time asc) as rn
+    from (
+    	select
+    	tor.customer_id,
+    	ifnull(tor.normal_store_id,tor.store_id) as store_id,
+    	tor.create_time,
+    	tor.sign_time,
+    	tdc.id as channel_id,
+    	tdc.name as channel_name,
+    	tcc.id as department_id,
+    	tcc.name as department_name
+    	from gemini.t_order tor 
+    	join gemini.t_eshop te on (tor.eshop_id = te.id)
+    	LEFT JOIN gemini.t_store ts ON (ts.id = ifnull(tor.normal_store_id,tor.store_id))
+    	LEFT JOIN gemini.t_department_channel tdc ON (te.channel_id = tdc.id)
+    	LEFT JOIN gemini.t_department_channel tcc ON (te.bussiness_group_id = tcc.id)
+    	LEFT JOIN gemini_mongo.tiny_dispatch td ON (td.orderid = tor.id)
+    	LEFT JOIN gemini.t_employee tem ON (tem.id = tor.employee_id)
+    	LEFT JOIN daqweb.df_customer_order_month_trade_new new ON (new.order_sn = tor.order_sn)
+    	where tor.sign_time is not null 
+        and tor.sign_time >= concat(from_unixtime(unix_timestamp(date_sub(now(), 1)),"yyyy-MM-dd"), ' 00:00:00')
+        AND tor.sign_time < concat(from_unixtime(unix_timestamp(now()),"yyyy-MM-dd"), ' 00:00:00')
+	) t1 
+) tor2 
+where tor2.rn =1 and tor2.channel_id is not null and concat(tor2.customer_id,tor2.store_id) in (select concat(customer_id,store_id) from b_user_first_order_store where channel_id is null)
+) channel on (buf.customer_id = channel.customer_id and buf.store_id = channel.store_id);
+
 
 
 
