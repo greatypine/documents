@@ -1,0 +1,9 @@
+
+
+create table  gabdp_log.log_add_collect_pid as 
+select
+tl.task , 
+tl.store_id ,
+if( task = 'add' , get_json_object(tl.body , '$.pid'), get_json_object(tl.body , '$.id')  ) as eshop_pro_id 
+from gabdp_log.t_log tl 
+where (tl.task = 'add' or tl.task = 'collect'  )
