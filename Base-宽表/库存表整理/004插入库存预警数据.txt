@@ -1,0 +1,64 @@
+insert into gabase.b_inventory_warning
+(
+	id,
+	pro_id,
+	content_name,
+	store_id,
+	store_white,
+	store_code,
+	store_name,
+	store_city_code,
+	channel_id ,
+	channel_name ,
+	department_id,
+	department_name,
+	pro_number,
+	cgcode,
+	barcode,
+	
+	joint_ims,
+    ims_master_id,
+    level4_code,
+    category_name,
+    linkman_name,
+    linkman_phone,
+	send_tag,
+	warn_num,
+    create_time 
+)
+
+
+select 
+    REGEXP_REPLACE(uuid(), '-','') as  id,
+	bih.pro_id,
+	bih.content_name,
+	bih.store_id,
+	bih.store_white,
+	bih.store_code,
+	bih.store_name,
+	bih.store_city_code,
+	bih.channel_id ,
+	bih.channel_name ,
+	bih.department_id,
+	bih.department_name,
+	bih.pro_number,
+	bih.cgcode,
+	bih.barcode,
+	
+	bih.joint_ims,
+    bih.ims_master_id,
+    bih.level4_code,
+    bih.category_name,
+    bih.linkman_name,
+    bih.linkman_phone,
+	0 as send_tag,
+	greatest(bih.warn_num_90,bih.warn_num_30,bih.warn_num_7) as warn_num,
+   from_unixtime(unix_timestamp(days_sub(now(), 1)), 'yyyy-MM-dd')  as create_time 
+ 
+from gabase.b_inventory_history bih
+where 1=1
+and bih.create_time =  from_unixtime(unix_timestamp(days_sub(now(), 1)), 'yyyy-MM-dd')
+and bih.pro_number < greatest(bih.warn_num_90,bih.warn_num_30,bih.warn_num_7)
+and greatest(bih.warn_num_90,bih.warn_num_30,bih.warn_num_7) != 0
+and ( bih.store_white = 'front'  or  bih.store_white = 'normal')
+and bih.sku_online = 'yes'

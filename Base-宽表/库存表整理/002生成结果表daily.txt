@@ -1,0 +1,198 @@
+create table   gabase.b_inventory_history_daily   as 
+
+select 
+
+ tiy.id,
+ tiy.pro_id,
+ tiy.eshop_id,
+ tiy.warehouse_id,
+ tiy.store_id,
+ tiy.pro_number,
+ tiy.warn_number,
+ tiy.status as inventory_status,
+ tiy.version,
+ tiy.is_alerted,
+ tiy.locked_number,
+ tiy.provider_id,
+ tiy.weighted_cost_price,
+ tiy.ims_sync_version,
+ tiy.create_time as inventory_create_time, 
+ tiy.update_time as inventory_update_time,
+ 
+ tp.content_name,
+ tp.content_price,
+ tp.member_price,
+ tp.content_bar,
+ tp.content_tag,
+ tp.cost_price,
+
+ tp.ims_master_id,
+ imsc.level4_code,
+ imsc.category_name,
+ imsc.linkman_name,
+ imsc.linkman_phone,
+ imsc.cgcode,
+ imsc.barcode,
+ 
+ CASE	
+ WHEN tp.STATUS = 0
+ AND tp.publish = 'yes' AND (tp.content_shelf='on' OR tp.content_shelf ='hidden') THEN
+ 	'yes'
+ ELSE
+ 	'no'
+ END AS sku_online,
+ 
+ tep.name AS eshop_name,
+ tep.self AS eshop_self,
+ tep.white AS eshop_white,
+ tep.create_time AS eshop_create_time,
+ tep.self_inventory ,
+ tep.send_type AS send_type,
+ tep.code AS eshop_code,
+ tep.eshop_kind ,
+ tep.area_company_id AS company_id,
+ tep.super_member,
+
+ tep.joint_ims,
+ 
+ ts.code  as  store_code,
+ ts.name AS store_name,
+ ts.province_code AS store_province_code,
+ ts.city_code AS store_city_code,
+ ts.ad_code AS store_ad_code,
+ ts.white AS store_white,
+ ts.create_time AS store_create_time,
+ ts.number as store_number,
+ 
+ dd.channel_id,
+ dd.channel_name,
+ dd.department_id,
+ dd.department_name,
+ 
+ twe.name as warehouse_name,
+ twe.type as warehouse_type,
+ twe.status as warehouse_status,
+ twe.telephone as warehouse_telephone,
+ ifnull(T_1.warn_num_90 , 0) as warn_num_90,
+ ifnull(T_2.warn_num_30 , 0) as warn_num_30,
+ ifnull(T_3.warn_num_7 , 0) as warn_num_7,
+
+ '' as extra_filed1    ,
+ '' as extra_filed2    ,
+ '' as extra_filed3    ,
+ '' as extra_filed4    ,
+ '' as extra_filed5    ,
+ '' as extra_filed6    ,
+ '' as extra_filed7    ,
+ '' as extra_filed8    ,
+ '' as extra_filed9    ,
+ '' as extra_filed10   ,
+ '' as extra_filed11   ,
+ '' as extra_filed12   ,
+ '' as extra_filed13   ,
+ '' as extra_filed14   ,
+ '' as extra_filed15  ,
+ from_unixtime(unix_timestamp(days_sub(now(), 1)), 'yyyy-MM-dd')  as create_time 
+ 
+ from  gemini.t_inventory tiy 
+ left join gemini.t_product tp on tiy.pro_id = tp.id 
+ left join 
+ (
+	select
+		tip.id ,
+		tip.code  as cgcode,
+		tip.barcode ,
+		tic4.code as level4_code,
+		icc.category_name,
+		icl.linkman_name,
+		icl.mobilephone as linkman_phone
+	from gemini.t_ims_product tip
+	join gemini.t_ims_product_category tipc on tip.id=tipc.pro_id
+	join gemini.t_ims_category tic4 on tipc.category4=tic4.id
+	left join gabase.ims_code_category icc on tic4.code = icc.code
+	left join gabase.ims_category_linkman icl on icc.category_name = icl.category_name
+	where tip.circulation_state != '×÷·Ï'
+	
+ )imsc on tp.ims_master_id= imsc.id 
+ join
+ (
+	select * from gemini.t_eshop 
+	where publish = 'yes' 
+	AND freeze_status = 'no' 
+	AND business_status in ( 'open','rest') 
+	AND status = 0
+	and name not like '%²âÊÔ%'
+	and name not like '%ÇïÇï%'
+	and name not like '%Çïºì%'
+	and name not like '%Çï¿ìµÝ%'
+	and white !='QA'
+ )tep on tiy.eshop_id = tep.id 
+ 
+ left JOIN (
+	SELECT tep2.id AS department_id,
+		   tep2.name AS department_name,
+		   tep3.tep3_name AS channel_name,
+		   tep3.tep3_id AS channel_id
+	FROM gemini.t_department_channel tep2 JOIN
+	  ( 
+		SELECT
+		tep3.parent_id,
+        tep3.name AS tep3_name,
+        tep3.id AS tep3_id
+		FROM gemini.t_department_channel tep3
+		WHERE tep3.level=2
+	  ) tep3 ON tep2.id=tep3.parent_id
+	WHERE tep2.level=1
+) dd  ON tep.channel_id=dd.channel_id	 
+ left join daqweb.view_store ts on tiy.store_id = ts.id 
+ left join gemini.t_warehouse twe  on tiy.warehouse_id = twe.id and twe.type ='front'
+ left join (
+	 
+	select 
+		toi.eshop_pro_id ,
+		tor.store_id , 
+		ceiling(sum(ifnull(toi.quantity,0))*2/90) as warn_num_90
+	from 
+		gemini.t_order_item toi 
+		join gemini.t_order tor on toi.order_id = tor.id
+	where toi.create_time > from_unixtime(unix_timestamp(days_sub(now(), 90)), 'yyyy-MM-dd')
+	and toi.create_time < to_date(now())
+	group by
+	toi.eshop_pro_id, 
+	tor.store_id 
+
+ )T_1 on  tiy.pro_id = T_1.eshop_pro_id and tiy.store_id = T_1.store_id 
+ left join 
+ (
+	select 
+		toi.eshop_pro_id ,
+		tor.store_id , 
+		ceiling(sum(ifnull(toi.quantity,0))*2/30) as warn_num_30
+	from 
+		gemini.t_order_item toi 
+		join gemini.t_order tor on toi.order_id = tor.id
+	where toi.create_time > from_unixtime(unix_timestamp(days_sub(now(), 30)), 'yyyy-MM-dd')
+	and toi.create_time < to_date(now())
+	group by
+	toi.eshop_pro_id, 
+	tor.store_id 
+ )T_2 on  tiy.pro_id = T_2.eshop_pro_id and tiy.store_id = T_2.store_id 
+ left join 
+ (
+	select 
+		toi.eshop_pro_id ,
+		tor.store_id , 
+		ceiling(sum(ifnull(toi.quantity,0))*2/7) as warn_num_7
+	from 
+		gemini.t_order_item toi 
+		join gemini.t_order tor on toi.order_id = tor.id
+	where toi.create_time > from_unixtime(unix_timestamp(days_sub(now(), 7)), 'yyyy-MM-dd')
+	and toi.create_time < to_date(now())
+	group by
+	toi.eshop_pro_id, 
+	tor.store_id 
+ )T_3 on  tiy.pro_id = T_3.eshop_pro_id and tiy.store_id = T_3.store_id 
+ 
+ where tep.white!='QA' AND ts.white!='QA' and ts.name not like '%²âÊÔ%'
+
+ 
