@@ -1,0 +1,193 @@
+
+
+
+drop table if exists gabdp_log.log_add_collect_pid  ;
+
+create table  gabdp_log.log_add_collect_pid as 
+select
+tl.task , 
+tl.store_id ,
+if( task = 'add' , get_json_object(tl.body , '$.pid'), get_json_object(tl.body , '$.id')  ) as eshop_pro_id 
+from gabdp_log.t_log tl 
+where (tl.task = 'add' or tl.task = 'collect'  )
+
+
+---------------------------
+
+drop table if exists   gabase.b_product_total  ;
+
+
+
+create table    gabase.b_product_total  as
+
+select 
+tp.id,
+tp.eshop_id,
+tp.content_name,
+tp.content_price,
+tp.member_price,
+tp.content_bar,
+tp.cost_price,
+tp.is_edit,
+tp.box_length_1,
+tp.box_width_1,
+tp.box_height_1,
+tp.content_standard,
+tp.expirationdate_1,
+tp.weight_1,
+tp.box_weight_1,
+tp.content_unit,
+tp.warn_number,
+tp.min_number,
+tp.max_number,
+tp.content_type,
+tp.content_commentcount,
+tp.content_shelf,
+tp.create_time,
+tp.is_combo,
+tp.is_combo_split,
+tp.code,
+tp.credit,
+tp.provider_id,
+tp.income_tax_rate,
+tp.output_tax_rate,
+tp.box_containing_quantity,
+tp.box_standard_1,
+tp.storage_temp,
+tp.delivery_cycle_1,
+tp.isfresh,
+tp.logistics_type_1,
+tp.self_code,
+tp.manager_category_ids,
+tp.manager_category_names,
+
+CASE	
+WHEN tp.STATUS = 0 AND tp.publish = 'yes' AND (tp.content_shelf='on' OR tp.content_shelf ='hidden') THEN
+'yes'
+ELSE
+'no'
+END  as sku_online,
+
+tep.name AS eshop_name,
+tep.self AS eshop_self,
+tep.white AS eshop_white,
+tep.create_time AS eshop_create_time,
+tep.self_inventory ,
+tep.send_type AS send_type,
+tep.code AS eshop_code,
+tep.eshop_kind ,
+tep.area_company_id AS company_id,
+tep.super_member,
+tep.province_code as eshop_province_code,
+tep.city_code as   eshop_city_code,
+tep.area_code as  eshop_area_code,
+tsa.name as city_name ,
+
+dd.channel_id ,
+dd.channel_name ,
+dd.department_id,
+dd.department_name ,
+
+tbm.id AS business_model_id, 
+tbm.name AS business_model_name,
+tbm.code As business_code,
+
+vpc.level1_name ,
+vpc.level2_name ,
+vpc.level3_name ,
+
+add_log.num as  add_car_num,
+collect_log.num  as  collect_num,
+0 as  search_num ,
+item_vc.sell_num,
+item_vc.order_num,
+item_vc.gmv_price ,
+bipt.order_profit 
+
+from gemini.t_product tp
+JOIN gemini.t_eshop tep ON tep.id=tp.eshop_id  
+and tep.name not like '%测试%'
+and tep.name not like '%秋秋%'
+and tep.name not like '%秋红%'
+and tep.name not like '%秋快递%'
+and tep.white !='QA'
+left join gemini.t_sys_area tsa  on tep.city_code = tsa.code 
+LEFT JOIN (
+	SELECT tep2.id AS department_id,
+		   tep2.name AS department_name,
+		   tep3.tep3_name AS channel_name,
+		   tep3.tep3_id AS channel_id
+	FROM gemini.t_department_channel tep2 JOIN
+	  ( 
+		SELECT
+		tep3.parent_id,
+        tep3.name AS tep3_name,
+        tep3.id AS tep3_id
+		FROM gemini.t_department_channel tep3
+		WHERE tep3.level=2
+	  ) tep3 ON tep2.id=tep3.parent_id
+	WHERE tep2.level=1
+) dd  ON tep.channel_id=dd.channel_id	 					
+LEFT JOIN gemini.t_business_model tbm ON tbm.id=tep.business_model_id 
+left join 
+(
+	select 
+		tpt.product_id,
+		max(tpc1.name) as level1_name , 
+		max(tpc2.name) as level2_name , 
+		max(tpc3.name) as level3_name  
+	from 
+	gemini.t_product_tag tpt 
+	left join gemini.t_product_category tpc1 on  tpt.category_id1 = tpc1.id 
+	left join gemini.t_product_category tpc2 on  tpt.category_id2 = tpc2.id 
+	left join gemini.t_product_category tpc3 on  tpt.category_id3 = tpc3.id 
+	where tpt.category_id1 is not null 
+	group by 
+	tpt.product_id
+)  vpc on tp.id = vpc.product_id
+left join
+(
+	select 
+		eshop_pro_id , 
+		count(distinct id ) as order_num ,
+		sum(quantity) as sell_num ,
+		sum(unit_price*quantity ) as gmv_price 
+	
+	from gemini.t_order_item
+	group by eshop_pro_id
+)item_vc  on tp.id = item_vc.eshop_pro_id 
+left join 
+(
+	select 
+		eshop_pro_id,
+		sum(ifnull(order_profit , 0)) as order_profit
+	from gabase.b_item_pro_total 
+	group by eshop_pro_id 
+)bipt on tp.id = bipt.eshop_pro_id 
+left join 
+(
+	select 
+		eshop_pro_id ,
+		count(1)  as num
+	from gabdp_log.log_add_collect_pid
+	where task = 'add'
+	and eshop_pro_id is not null 
+	and eshop_pro_id != ''
+	group by 
+	eshop_pro_id
+)add_log on tp.id = add_log.eshop_pro_id
+
+left join 
+(
+	select 
+		eshop_pro_id ,
+		count(1) as num 
+	from gabdp_log.log_add_collect_pid
+	where task = 'collect'
+	and eshop_pro_id is not null 
+	and eshop_pro_id != ''
+	group by 
+	eshop_pro_id
+)collect_log on tp.id = collect_log.eshop_pro_id
+
+
