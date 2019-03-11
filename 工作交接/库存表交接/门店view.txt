@@ -1,0 +1,22 @@
+create view daqweb.view_store as 
+
+select 
+ ts2.id,
+ ts2.code ,
+ ts2.name ,
+ ts2.province_code,
+ ts2.city_code ,
+ ts1.ad_code,
+ ts2.white ,
+ ts1.create_time ,
+ ts2.number,
+ ts1.estate
+
+from daqweb.t_store ts1 
+join gemini.t_store ts2  on ts1.id = ts2.id 
+where 1=1 
+and ts1.estate = '运营中' or ts1.estate = '试运营'
+and ts2.status = 0 
+and ts2.name not  like '%测试%'
+and ts2.name not  like '%废弃%'
+and ts2.white !=  'QA'
