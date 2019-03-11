@@ -1,0 +1,6 @@
+
+set hive.exec.dynamic.partition.mode=nonstrict
+
+from gabase.b_inventory_history_daily
+insert into  table gabase.b_inventory_history partition(create_time)
+select * distribute by create_time;
