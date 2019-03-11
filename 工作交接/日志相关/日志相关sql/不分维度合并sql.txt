@@ -1,0 +1,84 @@
+ 
+--23,24 两天的数据
+ 
+ select 
+  '所有用户数' as type,
+  count(1) as num
+ from gemini.t_customer  
+
+union 
+(
+ select 
+    '访问用户数' as type,
+	count(distinct customer_id)  as num
+ from  datacube_kudu.log_final lf
+ inner  join gemini.t_store  ts on lf.store_id = ts.id and ts.name not like '%测试%'
+ where 1=1
+	 and lf.simple_date >= '2018-09-23' 
+	 and lf.simple_date < '2018-09-25'
+	 and lf.store_id is not null 
+	 and lf.customer_id is not null 
+	 and lf.city_code is not null
+     and lf.customer_id not in (
+			'fakecustomerformicromarket000002',
+			'fakecustomerformicromarket000001',
+			'fakecustomerforexpress0000000001'
+		  )	 
+)
+union
+(
+select 
+	'加购用户数' as type,
+	count(distinct customer_id)  as num
+ from  datacube_kudu.log_final lf
+  inner  join gemini.t_store  ts on lf.store_id = ts.id and ts.name not like '%测试%'
+ where 1=1
+ and lf.simple_date >= '2018-09-23' 
+ and lf.simple_date < '2018-09-25'
+ and lf.customer_id is not null 
+ and lf.store_id is not null 
+ and lf.city_code is not null
+ and lf.customer_id not in (
+		'fakecustomerformicromarket000002',
+		'fakecustomerformicromarket000001',
+		'fakecustomerforexpress0000000001'
+	  )	  
+ and lf.behavior_name in
+  ( 
+	select  behavior_name from datacube_kudu.d_action_level where level = 9
+	)
+)
+union
+(
+	select 
+	'下单用户数' as type,
+	count(distinct customer_id)  as num
+	 from gemini.t_order tor 
+	  inner  join gemini.t_store  ts on tor.store_id = ts.id and ts.name not like '%测试%'
+	 where tor.create_time > '2018-09-23' 
+	and tor.create_time < '2018-09-25'  
+	and store_id is not null
+	and tor.customer_id not in (
+		'fakecustomerformicromarket000002',
+		'fakecustomerformicromarket000001',
+		'fakecustomerforexpress0000000001'
+	  )	  	
+)
+union 
+(
+	select 
+	'成交用户数' as type,
+	 count(distinct customer_id)  as num 
+	 from gemini.t_order tor 
+	 inner  join gemini.t_store  ts on tor.store_id = ts.id and ts.name not like '%测试%'
+	where tor.create_time > '2018-09-23' 
+	and tor.create_time < '2018-09-25'
+	and tor.sign_time is not null
+	and store_id is not null
+	and tor.customer_id not in (
+		'fakecustomerformicromarket000002',
+		'fakecustomerformicromarket000001',
+		'fakecustomerforexpress0000000001'
+	  )	 	
+)
+  
