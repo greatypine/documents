@@ -1,0 +1,166 @@
+
+-- 01, 28 日数据
+-- 只分析下订单并且签收的那一批人
+
+
+select 
+	'1' as action_level,
+	'浏览/跳转点击平均数' as numType,
+	round(avg(num),0) as num
+from 
+(
+	select 
+		count(distinct  lf.action_id) as num 
+	from datacube_kudu.log_final lf 
+		where 1=1
+		and lf.simple_date >= '2018-10-16' 
+		and lf.simple_date < '2018-10-17'
+		
+		 and lf.customer_id is not null 
+		  and lf.city_code is not null
+		  and lf.store_id is not null 
+		  and behavior_name is not null 
+		  
+		and lf.customer_id  in 
+		(
+			select customer_id from gemini.t_order 
+			where customer_id  is not null 
+			and sign_time is not null 
+			and sign_time > '2018-10-16'
+			and sign_time < '2018-10-17' 
+            and customer_id not in (
+			'fakecustomerformicromarket000002',
+			'fakecustomerformicromarket000001',
+			'fakecustomerforexpress0000000001'
+		    )				
+		)
+		and lf.behavior_name  in 
+		(
+			select behavior_name from datacube_kudu.d_action_level where level = 1
+		)
+	group by lf.customer_id
+) T_1
+ 
+union 
+
+(
+	select 
+	'2' as action_level,
+	'加购点击平均数' as numType,
+	round(avg(num),0) as num
+	from 
+	(
+		select 
+			count(distinct  lf.action_id) as num 
+		from datacube_kudu.log_final lf 
+			where 1=1
+			and lf.simple_date >= '2018-10-16' 
+			and lf.simple_date < '2018-10-17'
+			 and lf.customer_id is not null 
+		  and lf.city_code is not null
+		  and lf.store_id is not null 
+		  and behavior_name is not null 
+			
+			and lf.customer_id  in 
+			(
+				select customer_id from gemini.t_order 
+				where customer_id  is not null 
+				and sign_time is not null 
+				and sign_time > '2018-10-16'
+				and sign_time < '2018-10-17' 
+				and customer_id not in (
+				'fakecustomerformicromarket000002',
+				'fakecustomerformicromarket000001',
+				'fakecustomerforexpress0000000001'
+				)
+			)
+			and lf.behavior_name  in 
+			(
+				select behavior_name from datacube_kudu.d_action_level where level = 2
+			)
+		group by lf.customer_id
+	) T_1
+)
+
+union 
+
+(
+	select 
+	'3' as action_level,
+	'下单点击平均数' as numType,
+	round(avg(num),0) as num
+	from 
+	(
+		select 
+			count(distinct  lf.action_id) as num 
+		from datacube_kudu.log_final lf 
+			where 1=1
+			and lf.simple_date >= '2018-10-16' 
+			and lf.simple_date < '2018-10-17'
+			
+			 and lf.customer_id is not null 
+		  and lf.city_code is not null
+		  and lf.store_id is not null 
+		  and behavior_name is not null 
+			
+			and lf.customer_id  in 
+			(
+				select customer_id from gemini.t_order 
+				where customer_id  is not null 
+				and sign_time is not null 
+				and sign_time > '2018-10-16'
+				and sign_time < '2018-10-17'
+				and customer_id not in (
+				'fakecustomerformicromarket000002',
+				'fakecustomerformicromarket000001',
+				'fakecustomerforexpress0000000001'
+				)				
+			)
+			and lf.behavior_name  in 
+			(
+				select behavior_name from datacube_kudu.d_action_level where level = 3
+			)
+		group by lf.customer_id
+	) T_1
+)
+union 
+(
+	select 
+	'4' as action_level,
+	'支付点击平均数' as numType,
+	round(avg(num),0) as num
+	from 
+	(
+		select 
+			count(distinct  lf.action_id) as num 
+		from datacube_kudu.log_final lf 
+			where 1=1
+			and lf.simple_date >= '2018-10-16' 
+			and lf.simple_date < '2018-10-17'
+			
+			 and lf.customer_id is not null 
+		  and lf.city_code is not null
+		  and lf.store_id is not null 
+		  and behavior_name is not null 
+			
+			and lf.customer_id  in 
+			(
+				select customer_id from gemini.t_order 
+				where customer_id  is not null 
+				and sign_time is not null 
+				and sign_time > '2018-10-16'
+				and sign_time < '2018-10-17'
+				and customer_id not in (
+				'fakecustomerformicromarket000002',
+				'fakecustomerformicromarket000001',
+				'fakecustomerforexpress0000000001'
+				)				
+			)
+			and lf.behavior_name  in 
+			(
+				select behavior_name from datacube_kudu.d_action_level where level = 4
+			)
+		group by lf.customer_id
+	) T_1
+)
+
