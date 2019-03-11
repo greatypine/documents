@@ -1,0 +1,134 @@
+
+-- 27, 28 日数据
+-- 只分析下订单并且签收的那一批人
+
+select 
+    '1' as action_level,
+	'浏览/跳转点击' as numType,
+	lf.behavior_name ,
+	count(distinct lf.action_id) as num 
+from datacube_kudu.log_final lf 
+	where 1=1
+    and lf.simple_date >= '2018-09-27' 
+    and lf.simple_date < '2018-09-29'
+    and lf.customer_id  in 
+	(
+		select customer_id from gemini.t_order 
+		where customer_id  is not null 
+		and sign_time is not null 
+		and sign_time > '2018-09-27'
+		and sign_time < '2018-09-29'
+		and customer_id not in (
+		'fakecustomerformicromarket000002',
+		'fakecustomerformicromarket000001',
+		'fakecustomerforexpress0000000001'
+		)		
+	)
+	and lf.behavior_name  in 
+	(
+		select behavior_name from datacube_kudu.d_action_level where level = 1
+	)
+group by lf.behavior_name
+
+ 
+union 
+
+(
+	select 
+		'2' as action_level,
+		'加购点击' as numType,
+		lf.behavior_name ,
+		count(distinct lf.action_id) as num 
+	from datacube_kudu.log_final lf 
+		where 1=1
+		and lf.simple_date >= '2018-09-27' 
+		and lf.simple_date < '2018-09-29'
+		and lf.customer_id  in 
+		(
+			select customer_id from gemini.t_order 
+			where customer_id  is not null 
+			and sign_time is not null 
+			and sign_time > '2018-09-27'
+			and sign_time < '2018-09-29' 
+			and customer_id not in (
+			'fakecustomerformicromarket000002',
+			'fakecustomerformicromarket000001',
+			'fakecustomerforexpress0000000001'
+			)		
+
+		)
+		and lf.behavior_name  in 
+		(
+			select behavior_name from datacube_kudu.d_action_level where level = 2
+		)
+	group by lf.behavior_name
+
+)
+
+union 
+
+(
+	select 
+	    '3' as action_level,
+		'下单点击' as numType,
+		lf.behavior_name ,
+		count(distinct lf.action_id) as num 
+	from datacube_kudu.log_final lf 
+		where 1=1
+		and lf.simple_date >= '2018-09-27' 
+		and lf.simple_date < '2018-09-29'
+		
+		and lf.customer_id  in 
+		(
+			select customer_id from gemini.t_order 
+			where customer_id  is not null 
+			and sign_time is not null 
+			and sign_time > '2018-09-27'
+			and sign_time < '2018-09-29'
+			and customer_id not in (
+			'fakecustomerformicromarket000002',
+			'fakecustomerformicromarket000001',
+			'fakecustomerforexpress0000000001'
+			)				
+		)
+		and lf.behavior_name  in 
+		(
+			select behavior_name from datacube_kudu.d_action_level where level = 3
+		)
+	group by lf.behavior_name
+
+)
+
+union 
+
+(
+	select 
+	    '4' as action_level,
+		'支付点击' as numType,
+		lf.behavior_name ,
+		count(distinct lf.action_id) as num 
+	from datacube_kudu.log_final lf 
+		where 1=1
+		and lf.simple_date >= '2018-09-27' 
+		and lf.simple_date < '2018-09-29'
+		and lf.customer_id  in 
+		(
+			select customer_id from gemini.t_order 
+			where customer_id  is not null 
+			and sign_time is not null 
+			and sign_time > '2018-09-27'
+			and sign_time < '2018-09-29' 
+			and customer_id not in (
+			'fakecustomerformicromarket000002',
+			'fakecustomerformicromarket000001',
+			'fakecustomerforexpress0000000001'
+			)	
+		)
+		and lf.behavior_name  in 
+		(
+			select behavior_name from datacube_kudu.d_action_level where level = 4
+		)
+	group by lf.behavior_name
+
+)
+
