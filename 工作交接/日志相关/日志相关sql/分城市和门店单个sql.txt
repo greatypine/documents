@@ -1,0 +1,135 @@
+
+---------------------23,24日
+
+--访问用户数据
+select 
+	fnv_hash(concat(tsa.name ,ts.name)) as id,
+	tsa.name as city_name , 
+	ts.name as store_name , 
+	count(1) as visit_num  
+from 
+  (
+	  select
+		max(lf.city_code) as city_code   ,
+		lf.store_id
+	  from datacube_kudu.log_final lf
+		  where 1=1
+		  and lf.simple_date >= '2018-09-23' 
+		  and lf.simple_date < '2018-09-25'
+		  and lf.customer_id is not null 
+		  and lf.city_code is not null
+		  and lf.store_id is not null   
+	  group by lf.customer_id  ,lf.store_id 
+  ) T_1 
+left join  gemini.t_sys_area tsa on T_1.city_code =  tsa.code
+left join  gemini.t_store ts on T_1.store_id = ts.id
+group by  tsa.name ,ts.name 
+order by  tsa.name , count(1) desc  
+  
+  
+  
+  
+ --- 加购数
+ 
+select 
+	fnv_hash(concat(tsa.name ,ts.name)) as id,
+	tsa.name as city_name , 
+	ts.name as store_name , 
+	count(1) as add_num  
+from 
+  ( 
+	  select max(lf.city_code) as city_code   , lf.store_id
+		  from datacube_kudu.log_final lf
+		  where 1=1
+		  and lf.simple_date >= '2018-09-23' 
+		  and lf.simple_date < '2018-09-25' 
+		  and lf.customer_id is not null 
+		  and lf.city_code is not null
+		  and lf.store_id is not null   
+		  and lf.behavior_name in 
+			 ( 
+			'填写订单',
+			'获取用户选中购物车分组信息',
+			'预约服务时间',
+			'获取发货单详情',
+			'购物车全选',
+			'新立即购买',
+			'新团购下单',
+			'再来一单',
+			'积分商品下单页',
+			'可拆分商品预约(非团购)',
+			'填写订单',
+			'购物车列表',
+			'下单',
+			'选择全部',
+			'添加购物车',
+			'提交订单',
+			'改变分组状态',
+			'购物车删除',
+			'合并支付下单页',
+			'改变用户选中购物车分组状态')
+		group by lf.customer_id  ,lf.store_id 
+	) T_1 
+left join  gemini.t_sys_area tsa on T_1.city_code =  tsa.code
+left join  gemini.t_store ts on T_1.store_id = ts.id
+group by  tsa.name ,ts.name 
+order by  tsa.name , count(1) desc 
+  
+  
+  
+ 
+ --下单
+
+ select
+	 fnv_hash(concat(T_1.city_name ,T_1.store_name)) as id,
+	 T_1.city_name ,
+	 T_1.store_name,
+	 count(1) as order_num 
+ from 
+ (
+	 select 
+		max(tsa.name) as city_name,
+		ts.name as store_name
+	 from 
+	 gemini.t_order tor 
+	 left join  gemini.t_store ts  on tor.store_id = ts.id 
+	 left join  gemini.t_sys_area  tsa on ts.city_code = tsa.code
+	 where tor.create_time > '2018-09-23' 
+	 and tor.create_time < '2018-09-25'
+	 group by tor.customer_id , ts.name
+  ) T_1
+group by T_1.city_name , T_1.store_name
+order by  T_1.city_name,count(1) desc 
+
+ 
+  
+  --成交
+ select
+	 fnv_hash(concat(T_1.city_name ,T_1.store_name)) as id,
+	 T_1.city_name ,
+	 T_1.store_name,
+	 count(1) as order_num 
+ from 
+ (
+	 select 
+		max(tsa.name) as city_name,
+		ts.name as store_name
+	 from 
+	 gemini.t_order tor 
+	 left join  gemini.t_store ts  on tor.store_id = ts.id 
+	 left join  gemini.t_sys_area  tsa on ts.city_code = tsa.code
+	 where tor.create_time > '2018-09-23' 
+	 and tor.create_time < '2018-09-25'
+	 and tor.sign_time is not null 
+	 group by tor.customer_id , ts.name
+  ) T_1
+group by T_1.city_name , T_1.store_name
+order by  T_1.city_name,count(1) desc 
+  
+ 
+
+ 
+ 
+ 
+
+
