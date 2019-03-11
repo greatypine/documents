@@ -1,0 +1,1 @@
+drop table  gabase.b_inventory_history_daily 
