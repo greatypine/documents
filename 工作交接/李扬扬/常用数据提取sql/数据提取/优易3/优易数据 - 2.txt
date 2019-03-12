@@ -1,0 +1,109 @@
+select 
+ifnull(T_1.category_name,'') as 商品分类,
+ifnull(T_1.content_bar,'') as 商品条码,
+ifnull(T_1.content_name,'') as 商品名称,
+ifnull(T_2.member_num,0) as 社员数量,
+ifnull(T_3.unmember_num,0) as 非社员数量,
+ifnull(T_4.member_order_num,0) as 社员下单数 ,
+ifnull(T_4.unmember_order_num,0) as 非社员下单数,
+ifnull(T_4.member_order_qutity,0) as 社员销售数量,
+ifnull(T_4.unmember_order_qutity,0) as  非社员销售数量,
+ifnull(T_4.member_gmv,0) as 社员销售金额 ,
+ifnull(T_4.unmember_gmv,0) as  非社员销售金额
+from 
+(
+	select 
+	fnv_hash(concat(tpt.category_id1 ,tp.id)) as tid ,
+	max(tpc.name) as category_name,
+	max(tp.content_bar) as content_bar,
+	max(tp.content_name) as content_name
+	from 
+	daqweb.df_mass_order_monthly dmot
+	join gemini.t_order_item toi on dmot.id = toi.order_id
+	join gemini.t_product tp on toi.eshop_pro_id = tp.id
+	join gemini.t_product_tag tpt on tp.id = tpt.product_id
+	left join gemini.t_product_category tpc on  tpt.category_id1 = tpc.id
+	where 1=1
+	and dmot.store_city_code = '010'
+	--优易
+	and dmot.bussiness_group_id = '8ac28b935fed0bc8015fed4c76f60018'
+	and dmot.sign_time > '2018-10-01' 
+	and dmot.sign_time < '2018-11-01' 
+	
+	group by 
+	tpt.category_id1,
+	tp.id		
+)T_1
+
+left join 
+(
+	select 
+	fnv_hash(concat(tpt.category_id1 ,tp.id)) as tid ,
+	count(distinct dmot.customer_id )as member_num 
+	from 
+	daqweb.df_mass_order_monthly dmot
+	join gemini.t_order_item toi on dmot.id = toi.order_id
+	join gemini.t_product tp on toi.eshop_pro_id = tp.id
+	join gemini.t_product_tag tpt on tp.id = tpt.product_id
+	left join gemini.t_product_category tpc on  tpt.category_id1 = tpc.id
+	where 1=1
+	and dmot.store_city_code = '010'
+	--优易
+	and dmot.bussiness_group_id = '8ac28b935fed0bc8015fed4c76f60018'
+	and dmot.sign_time > '2018-10-01' 
+	and dmot.sign_time < '2018-11-01' 
+	and dmot.order_tag1   like '%M%'  
+	group by 
+	tpt.category_id1,
+	tp.id	
+	
+)T_2 on T_1.tid = T_2.tid
+left join 
+(
+	select 
+	fnv_hash(concat(tpt.category_id1 ,tp.id)) as tid ,
+	count(distinct dmot.customer_id )as unmember_num 
+	from 
+	daqweb.df_mass_order_monthly dmot
+	join gemini.t_order_item toi on dmot.id = toi.order_id
+	join gemini.t_product tp on toi.eshop_pro_id = tp.id
+	join gemini.t_product_tag tpt on tp.id = tpt.product_id
+	left join gemini.t_product_category tpc on  tpt.category_id1 = tpc.id
+	where 1=1
+	and dmot.store_city_code = '010'
+	--优易
+	and dmot.bussiness_group_id = '8ac28b935fed0bc8015fed4c76f60018'
+	and dmot.sign_time > '2018-10-01' 
+	and dmot.sign_time < '2018-11-01' 
+	and dmot.order_tag1 not  like '%M%'  
+	group by 
+	tpt.category_id1,
+	tp.id	
+)T_3 on T_1.tid = T_3.tid
+left join 
+(
+	select 
+	fnv_hash(concat(tpt.category_id1 ,tp.id)) as tid ,
+	sum(case when dmot.order_tag1  like '%M%'  then 1 else 0 end) as member_order_num ,
+	sum(case when dmot.order_tag1 not  like '%M%'  then 1 else 0 end) as unmember_order_num ,
+	sum(case when dmot.order_tag1  like '%M%'  then toi.quantity else 0 end) as member_order_qutity ,
+	sum(case when dmot.order_tag1  not like '%M%'  then toi.quantity else 0 end) as unmember_order_qutity ,
+	sum(case when dmot.order_tag1  like '%M%'  then toi.unit_price*toi.quantity else 0 end) as member_gmv ,
+	sum(case when dmot.order_tag1 not  like '%M%'  then toi.unit_price*toi.quantity else 0 end) as unmember_gmv 
+	from 
+	daqweb.df_mass_order_monthly dmot
+	join gemini.t_order_item toi on dmot.id = toi.order_id
+	join gemini.t_product tp on toi.eshop_pro_id = tp.id
+	join gemini.t_product_tag tpt on tp.id = tpt.product_id
+	left join gemini.t_product_category tpc on  tpt.category_id1 = tpc.id
+	where 1=1
+	and dmot.store_city_code = '010'
+	--优易
+	and dmot.bussiness_group_id = '8ac28b935fed0bc8015fed4c76f60018'
+	and dmot.sign_time > '2018-10-01' 
+	and dmot.sign_time < '2018-11-01' 
+	group by 
+	tpt.category_id1,
+	tp.id	
+)T_4 on T_1.tid = T_4.tid
+order  by 商品分类

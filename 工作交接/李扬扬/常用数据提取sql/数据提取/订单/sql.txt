@@ -1,0 +1,68 @@
+SELECT
+	tp.content_name AS "商品名称",
+	tor.id AS "序号",
+	ts1. NAME AS "门店",
+	tor.order_type AS "订单类型",
+	tor.order_sn AS "订单号",
+	tor.business_model_id AS "业务单号",
+	tor.order_status AS "订单状态",
+	tc. NAME AS "客户名",
+	tc.mobilephone AS "客户电话",
+	toa. NAME AS "收件人姓名",
+	toa.mobilephone AS "收件人电话",
+	toa.address AS "收件人地址",
+	tor.employee_name AS "国安侠",
+	tor.payable_price AS "应付金额",
+	tor.trading_price AS "总金额",
+	tcc.content_price AS "优惠金额",
+	tre.pay_status AS "支付状态",
+	tre.pay_platform AS "支付平台",
+	te.self AS "协议",
+	te. NAME AS "E店",
+	tor.appointment_start_time AS "预约开始时间",
+	tor.appointment_end_time AS "预约结束时间",
+	tor.create_time AS "下单时间",
+	tor.sign_time AS "签收时间",
+	tor.order_source AS "订单渠道",
+	tor.buyer_remark AS "买家备注",
+	tor.seller_remark AS "卖家备注",
+	tor.employee_remark AS "国安侠备注",
+	tor.store_remark AS "门店备注",
+	ts2. NAME AS "所属门店",
+	toi.quantity as '销售数量'
+FROM
+	t_product tp
+LEFT JOIN t_order_item toi ON tp.id = toi.eshop_pro_id
+LEFT JOIN t_order tor ON toi.order_id = tor.id and tor.sign_time is not null 
+LEFT JOIN t_store ts1 ON tor.store_id = ts1.id
+LEFT JOIN t_store ts2 ON tor.normal_store_id = ts2.id
+LEFT JOIN t_customer tc ON tor.id = tc.id
+LEFT JOIN t_order_address toa ON tor.order_address_id = toa.id
+LEFT JOIN t_order_group tog ON tor.group_id = tog.id
+LEFT JOIN t_card_coupon tcc ON tog.card_coupon_id = tcc.id
+LEFT JOIN t_order_receipts tre ON tor.group_id = tre.order_group_id
+LEFT JOIN t_eshop te ON tor.eshop_id = te.id
+WHERE
+	tp.content_name IN (
+		'SNP斯内普龙形舒缓面膜10P',
+		'SNP斯内普水獭形水漾保湿面膜10P',
+		'彩虹莱妃尔美猴王舒缓保湿面膜',
+		'彩虹莱妃尔三部曲保湿紧致面膜',
+		'彩虹莱妃尔三部曲胶原紧致焕肤面膜',
+		'彩虹莱妃尔三部曲蓝莓保湿紧致面膜',
+		'彩虹莱妃尔三部曲芦荟舒缓保湿面膜',
+		'彩虹莱妃尔羊羊保湿紧致面膜',
+		'莱妃尔老虎抗皱面膜',
+		'莱妃尔美猴王舒缓保湿面膜',
+		'莱妃尔三部曲保湿紧致面膜',
+		'莱妃尔三部曲胶原紧致焕肤面膜',
+		'莱妃尔三部曲蓝莓保湿紧致面膜',
+		'莱妃尔三部曲芦荟舒缓保湿面膜',
+		'莱妃尔羊羊保湿紧致面膜',
+		'斯内普海洋燕窝补水安瓶精华面膜',
+		'斯内普虎形抗皱面膜',
+		'斯内普黄金胶原蛋白精华面膜',
+		'斯内普龙形舒缓面膜',
+		'斯内普水獭形水漾保湿面膜',
+		'斯内普熊猫形美白面膜'
+	)

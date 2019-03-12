@@ -1,0 +1,18 @@
+select
+	tip.code as 商品内部编码,
+	tip.content_name as 商品名称,
+	tip.barcode as 商品条形码,
+	tic1.name as 一级分类名称,
+	tic2.name as 二级分类名称,
+	tic3.name as 三级分类名称,
+	tic4.name as 四级分类名称,
+	tip.specification as 规格,
+	tip.sale_unit as 单位,
+	tip.content_price as 标准售价
+from t_ims_product tip
+join t_ims_product_category tipc on tip.id=tipc.pro_id
+join t_ims_category tic1 on tipc.category1=tic1.id
+join t_ims_category tic2 on tipc.category2=tic2.id
+join t_ims_category tic3 on tipc.category3=tic3.id
+join t_ims_category tic4 on tipc.category4=tic4.id
+where tip.circulation_state != '作废'

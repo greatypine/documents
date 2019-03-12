@@ -1,0 +1,428 @@
+
+select 
+	dmot.id  as 订单id,
+	dmot.order_sn  as 订单编号, 
+	dmot.customer_id as 用户id,
+	dmot.customer_mobile_phone as 用户手机号,
+	dmot.addr_mobilephone  as 收货手机号,
+	vcm.mac_address  as mac地址,
+	T_1.devicenum as 设备码
+	
+from df_mass_order_total  dmot 
+left join gemini.t_store ts on dmot.store_id  = ts.id 
+left join daqweb.view_customer_mac vcm on dmot.customer_id = vcm.customer_id 
+left join (
+	select
+	customerid,
+	max(devicenum ) as devicenum
+	from gemini.register_customer_device_info 
+	group by customerid
+
+)T_1 on dmot.customer_id = T_1.customerid
+
+
+where dmot.sign_time > '2019-01-05' 
+and dmot.sign_time < '2019-01-06' 
+--and dmot.delivery_type = 'self'
+--and ts.white = 'front'
+and order_tag4 = 'A1' 
+
+
+291c7e3d31424fd4bd3b4f5cb6ffc941
+
+
+
+----------------------------------------
+----------------------------------------
+----------------------------------------
+select 
+ veo.employee_no as 员工编号,
+ veo.name as 名字 ,
+ veo.mobilephone as 电话 ,
+ veo.tel  as 紧急联系人电话  , 
+ veo.city as 城市  ,
+ veo.zw   as 职务,
+ if(veo.humanstatus = 1 , '在职' , '离职') as '是否在职',
+ T_1.order_nums as 下单次数
+ 
+from daqweb.view_employee_offline veo 
+join (
+	select 
+		dmot.customer_mobile_phone ,
+		count(1) as order_nums 
+		
+	from df_mass_order_total  dmot 
+	left join gemini.t_store ts on dmot.store_id  = ts.id 
+	join(
+		select 
+			bbt.customer_id
+		from 
+		gabase.b_blacklist bbt
+		where 1=1 
+		and bbt.ismember = 'yes'
+		and(bbt.phone_num >= 5 or bbt.mac_num >= 3 or bbt.device_num > =3 ) 
+	)T_2 on dmot.customer_id = T_2.customer_id
+	where dmot.sign_time > '2019-01-04' 
+	and dmot.sign_time < '2019-01-05' 
+	--and dmot.delivery_type = 'self'
+	--and ts.white = 'front'
+	and (dmot.apportion_coupon = 5 or dmot.apportion_coupon = 10 ) 
+	group by dmot.customer_mobile_phone
+)T_1 on  veo.mobilephone = T_1.customer_mobile_phone
+where veo.humanstatus != 0 
+
+
+
+----------------------------------------
+----------------------------------------
+----------------------------------------
+select 
+ veo.employee_no as 员工编号,
+ veo.name as 名字 ,
+ veo.mobilephone as 电话 ,
+ veo.tel  as 紧急联系人电话  , 
+ veo.city as 城市  ,
+ veo.zw   as 职务,
+ if(veo.humanstatus = 1 , '在职' , '离职') as '是否在职'
+ 
+from daqweb.view_employee_offline veo 
+join (
+	select 
+		dmot.customer_mobile_phone 
+		
+	from df_mass_order_total  dmot 
+	left join gemini.t_store ts on dmot.store_id  = ts.id 
+	join(
+		select 
+			bbt.customer_id,
+			bbt.phone_num,
+			bbt.mac_num,
+			bbt.device_num
+		from 
+		gabase.b_blacklist bbt
+		where 1=1 
+		and bbt.ismember = 'yes'
+		and(bbt.phone_num >= 5 or bbt.mac_num >= 3 or bbt.device_num > =3 ) 
+	)T_2 on dmot.customer_id = T_2.customer_id
+	where dmot.sign_time > '2019-01-05' 
+	and dmot.sign_time < '2019-01-06' 
+	--and dmot.delivery_type = 'self'
+	--and ts.white = 'front'
+	and order_tag4 = 'A1' 
+)T_1 on  veo.mobilephone = T_1.customer_mobile_phone
+where veo.humanstatus != 0 
+
+
+
+
+
+
+
+
+select 
+ veo.employee_no as 员工编号,
+ veo.name as 名字 ,
+ veo.mobilephone as 电话 ,
+ veo.tel  as 紧急联系人电话  , 
+ veo.city as 城市  ,
+ veo.zw   as 职务,
+ if(veo.humanstatus = 1 , '在职' , '离职') as '是否在职'
+from 
+gabase.b_blacklist bbt
+join daqweb.view_employee_offline veo on bbt.customer_phone = veo.mobilephone
+where 1=1 
+and bbt.ismember = 'yes'
+
+and(bbt.phone_num >= 5 or bbt.mac_num >= 3 or bbt.device_num > =3 )
+
+
+
+
+
+mac地址有两个以上用户登陆过
+
+
+
+
+
+select 
+ name as 名字 ,
+ mobilephone as 电话 ,
+ tel  as 紧急联系人电话, 
+ city as 城市,
+ zw   as 职务,
+ if(humanstatus = 1 , '在职' , '离职') as '是否在职'
+from daqweb.view_employee_offline
+where humanstatus != 0 
+
+
+
+
+
+
+
+select 
+
+ veo.employee_no as 员工编号,
+ veo.name as 名字 ,
+ veo.mobilephone as 电话 ,
+ veo.tel  as 紧急联系人电话  , 
+ veo.city as 城市  ,
+ veo.zw   as 职务,
+ if(veo.humanstatus = 1 , '在职' , '离职') as '是否在职',
+ T_1.phone_num as '同一天同一门店注册,并且手机号码前7位相同的数量',
+ T_1.phone_num_member as '(会员)同一天同一门店注册,并且手机号码前7位相同的数量',
+ T_1.mac_num as 相同mac地址的用户数,
+ T_1.mac_num_member as '(会员)相同mac地址的用户数',
+ T_1.device_num as 相同手机设备码的用户数,
+ T_1.device_num_member as '(会员)相同手机设备码的用户数',
+ T_1.mac_address as mac地址,
+ T_1.devicenum as 设备码
+ 
+ 
+from daqweb.view_employee_offline veo 
+join (
+	select 
+		dmot.customer_mobile_phone,
+		max(T_2.phone_num) as phone_num,
+		max(T_2.phone_num_member) as phone_num_member,
+		max(T_2.mac_num)as mac_num,
+		max(T_2.mac_num_member)as mac_num_member,
+		max(T_2.device_num)as device_num,
+		max(T_2.device_num_member)as device_num_member,
+		max(T_2.mac_address)as mac_address,
+		max(T_2.devicenum) as  devicenum
+		
+	from daqWeb.df_mass_order_total  dmot 
+	left join gemini.t_store ts on dmot.store_id  = ts.id 
+	join(
+		select 
+			bbt.customer_id,
+			bbt.phone_num_member,
+			bbt.phone_num,
+			bbt.mac_num,
+			bbt.mac_num_member,
+			bbt.device_num,
+			bbt.device_num_member,
+			bbt.mac_address,
+			bbt.devicenum
+		from 
+		gabase.b_blacklist bbt
+		where 1=1 
+		and bbt.ismember = 'yes'
+		and(bbt.phone_num >= 5 or bbt.mac_num >= 3 or bbt.device_num > =3 ) 
+	)T_2 on dmot.customer_id = T_2.customer_id
+	where dmot.sign_time > '2019-01-05' 
+	and dmot.sign_time < '2019-01-06' 
+	--and dmot.delivery_type = 'self'
+	--and ts.white = 'front'
+	and order_tag4 = 'A1' 
+	group by dmot.customer_mobile_phone
+)T_1 on  veo.mobilephone = T_1.customer_mobile_phone
+where veo.humanstatus != 0 
+
+
+
+
+
+
+
+
+
+
+select 
+
+ veo.employee_no as 员工编号,
+ veo.name as 名字 ,
+ veo.mobilephone as 电话 ,
+ veo.tel  as 紧急联系人电话  , 
+ veo.city as 城市  ,
+ veo.zw   as 职务,
+ if(veo.humanstatus = 1 , '在职' , '离职') as '是否在职',
+ T_1.phone_num as '同一天同一门店注册,并且手机号码前7位相同的数量',
+ T_1.phone_num_member as '(会员)同一天同一门店注册,并且手机号码前7位相同的数量',
+ T_1.mac_num as 相同mac地址的用户数,
+ T_1.mac_num_member as '(会员)相同mac地址的用户数',
+ T_1.device_num as 相同手机设备码的用户数,
+ T_1.device_num_member as '(会员)相同手机设备码的用户数',
+ T_1.mac_address as mac地址,
+ T_1.devicenum as 设备码
+ 
+ 
+from daqweb.view_employee_offline veo 
+join (
+	select 
+		dmot.customer_mobile_phone,
+		max(T_2.phone_num) as phone_num,
+		max(T_2.phone_num_member) as phone_num_member,
+		max(T_2.mac_num)as mac_num,
+		max(T_2.mac_num_member)as mac_num_member,
+		max(T_2.device_num)as device_num,
+		max(T_2.device_num_member)as device_num_member,
+		max(T_2.mac_address)as mac_address,
+		max(T_2.devicenum) as  devicenum
+		
+	from daqWeb.df_mass_order_total  dmot 
+	left join gemini.t_store ts on dmot.store_id  = ts.id 
+	join(
+		select 
+			bbt.customer_id,
+			bbt.phone_num_member,
+			bbt.phone_num,
+			bbt.mac_num,
+			bbt.mac_num_member,
+			bbt.device_num,
+			bbt.device_num_member,
+			bbt.mac_address,
+			bbt.devicenum
+		from 
+		gabase.b_blacklist bbt
+		where 1=1 
+		and bbt.ismember = 'yes'
+		and(bbt.phone_num >= 5 or bbt.mac_num >= 3 or bbt.device_num > =3 ) 
+	)T_2 on dmot.customer_id = T_2.customer_id
+	where dmot.sign_time > '2019-01-04' 
+	and dmot.sign_time < '2019-01-05' 
+	--and dmot.delivery_type = 'self'
+	--and ts.white = 'front'
+	and (dmot.apportion_coupon = 5 or dmot.apportion_coupon = 10 ) 
+	group by dmot.customer_mobile_phone
+)T_1 on  veo.mobilephone = T_1.customer_mobile_phone
+where veo.humanstatus != 0 
+
+
+
+
+
+灰名单规则
+同一天同一门店注册,并且手机号码前7位相同,注册数>=5
+相同mac地址的用户数>= 3 
+相同手机设备码的用户数>= 3 
+
+
+
+
+-----------------------多次使用25优惠券-----------------------------
+select
+		 
+	dmot.addr_mobilephone as  收件人电话,
+	sum(1)   as 使用优惠券订单数,
+	count(distinct customer_mobile_phone) as 使用的账号数  ,
+	max(T_1.name )  as 职工姓名,
+	max(T_1.mobilephone ) as 员工电话,
+	max(T_1.tel)  as 紧急联系人电话, 
+	max(T_1.city ) as 城市,
+	max(T_1.zw  ) as 职位,
+	max(T_1.stat) as 员工状态
+
+from
+daqweb.df_mass_order_total dmot 
+left join (
+	select
+		veo.name  ,
+		veo.mobilephone  ,
+		veo.tel , 
+		veo.city ,
+		veo.zw   ,
+		if(veo.humanstatus = 1 , '在职' , '离职') as  stat
+	from daqweb.view_employee_offline veo
+	where veo.humanstatus != 0 
+)T_1 on dmot.addr_mobilephone = T_1.mobilephone
+where 1=1
+and dmot.order_tag4 = 'A1'
+and dmot.create_time > '2018-12'
+and dmot.create_time < '2019-01'
+and dmot.sign_time > '2018-12'
+and dmot.sign_time <  '2019-01'
+group by dmot.addr_mobilephone
+having count(1) >=4
+
+
+---------------------------------------------------------------
+
+
+select 
+	dmot.addr_mobilephone  
+from
+daqweb.df_mass_order_total dmot 
+left join (
+	select
+		veo.name  ,
+		veo.mobilephone  ,
+		veo.tel , 
+		veo.city ,
+		veo.zw   ,
+		if(veo.humanstatus = 1 , '在职' , '离职') as  stat
+	from daqweb.view_employee_offline veo
+	where veo.humanstatus != 0 
+)T_1 on dmot.addr_mobilephone = T_1.mobilephone
+left join 
+where 1=1
+and dmot.order_tag4 = 'A1'
+and dmot.create_time > '2018-12'
+and dmot.create_time < '2019-01'
+and dmot.sign_time > '2018-12'
+and dmot.sign_time <  '2019-01'
+group by dmot.addr_mobilephone
+having count(1) >=4
+
+-----------------------------------城市灰名单
+
+select 
+
+	ts.name as 开卡门店,
+	tsa.name as 城市,
+	dum.mobilephone as 用户手机号,
+	dum.regist_time as 注册时间,
+	dum.opencard_time  as 开卡时间,
+	dum.birthday as 生日,
+	T_1.mac_num as 相同mac地址的用户数,
+	T_1.mac_num_member as '(会员)相同mac地址的用户数',
+	T_1.mac_address as mac地址,
+	T_1.device_num as 相同手机设备码的用户数,
+	T_1.device_num_member as '(会员)相同手机设备码的用户数',
+	T_1.devicenum as 设备码,
+	T_1.phone_num as '同一天同一门店注册,并且手机号码前7位相同的数量',
+	T_1.phone_num_member as '(会员)同一天同一门店注册,并且手机号码前7位相同的数量',
+	dum.invitecode as 邀请码,
+	ths.employee_no as 邀请员工编号,
+	ths.phone  as 邀请员工电话,
+	ths.tel as 邀请员工紧急联系人电话,
+	ths.name as 邀请员工姓名,
+	ths.cityselect as 邀请员工城市,
+	ths.zw as 邀请员工职位,
+	ths.storename as 邀请员工员工所在门店,
+	if(ths.humanstatus = 1 , '在职' , '离职') as '邀请员工是否在职'
+
+
+from daqweb.df_user_member dum 
+join (
+	select 
+		bbt.customer_id,
+		bbt.phone_num_member,
+		bbt.phone_num,
+		bbt.mac_num,
+		bbt.mac_num_member,
+		bbt.device_num,
+		bbt.device_num_member,
+		bbt.mac_address,
+		bbt.devicenum
+	from 
+	gabase.b_blacklist bbt
+	where 1=1 
+	and bbt.ismember = 'yes'
+	and(bbt.phone_num >= 5 or bbt.mac_num >= 3 or bbt.device_num > =3 ) 
+)T_1 on dum.customer_id = T_1.customer_id
+left join gemini.t_store ts on dum.regist_storeid = ts.id 
+left join gemini.t_sys_area tsa  on ts.city_code = tsa.code 
+left join daqweb.t_humanresources ths on dum.inviteCode = ths.inviteCode
+where 1=1 
+
+
+
+
+
+
+
+
+

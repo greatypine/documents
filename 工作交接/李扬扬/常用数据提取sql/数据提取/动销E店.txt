@@ -1,0 +1,11 @@
+
+SELECT count(*) from t_eshop  
+where publish = 'yes' 
+AND freeze_status = 'no' 
+AND business_status in ( 'open','rest') 
+AND status = 0
+and name not like '%²âÊÔ%'
+and name not like '%ÇïÇï%'
+and name not like '%Çïºì%'
+and name not like '%Çï¿ìµİ%'
+and white !='QA'

@@ -1,0 +1,152 @@
+
+
+select 
+from_unixtime(unix_timestamp(dmot.sign_time), 'yyyy-MM') as 月份,
+max(tpc.name) as 一级分类,
+max(tp.content_name) as 商品名称,
+count(distinct dmot.customer_id) as 用户数量,
+count(quantity) as 销售数量,
+sum(unit_price*quantity) as 销售额,
+if(dmot.order_tag1 like '%M%' , '社员', '非社员') as 用户类型,
+max(dmot.eshop_name) as E店名称
+from 
+daqweb.df_mass_order_total dmot
+left join gemini.t_order_item toi on dmot.id = toi.order_id
+join gemini.t_product tp on toi.eshop_pro_id = tp.id
+join gemini_dfs_tmp.t_product_tag tpt on tp.id = tpt.product_id
+left join gemini.t_product_category tpc on  tpt.category_id1 = tpc.id
+where 1=1
+and dmot.store_city_code = '010'
+--优易
+and dmot.bussiness_group_id = '8ac28b935fed0bc8015fed4c76f60018'
+and dmot.sign_time >= '2018-01-01'
+group by 
+月份,
+tpt.category_id1,
+tp.id,
+用户类型
+order by 月份,一级分类,tp.id
+
+
+
+-------------1.2 
+select 
+gemini.date_trunc_wm(dmot.sign_time,'week',1) as 自然周,
+max(tpc.name) as 一级分类,
+max(tp.content_name) as 商品名称,
+count(distinct dmot.customer_id) as 用户数量,
+count(quantity) as 销售数量,
+sum(unit_price*quantity) as 销售额,
+if(dmot.order_tag1 like '%M%' , '社员', '非社员') as 用户类型,
+max(dmot.eshop_name) as E店名称
+from 
+daqweb.df_mass_order_total dmot
+left join gemini.t_order_item toi on dmot.id = toi.order_id
+ join gemini.t_product tp on toi.eshop_pro_id = tp.id
+ join gemini_dfs_tmp.t_product_tag tpt on tp.id = tpt.product_id
+left join gemini.t_product_category tpc on  tpt.category_id1 = tpc.id
+where 1=1
+and dmot.store_city_code = '010'
+and dmot.bussiness_group_id = '8ac28b935fed0bc8015fed4c76f60018'
+and dmot.sign_time >= '2018-01-01'
+and tpc.level=1
+group by 
+自然周,
+tpt.category_id1,
+tp.id,
+用户类型
+order by 自然周,一级分类,tp.id
+
+
+
+
+
+
+
+
+---------------2.1
+select 
+from_unixtime(unix_timestamp(dmot.sign_time), 'yyyy-MM') as 月份,
+max(tpc.name) as 一级分类,
+
+count(distinct dmot.customer_id) as 用户数量,
+count(quantity) as 销售数量,
+sum(unit_price*quantity) as 销售额,
+if(dmot.order_tag1 like '%M%' , '社员', '非社员') as 用户类型,
+max(dmot.eshop_name) as E店名称
+from 
+daqweb.df_mass_order_total dmot
+left join gemini.t_order_item toi on dmot.id = toi.order_id
+ join gemini.t_product tp on toi.eshop_pro_id = tp.id
+ join gemini_dfs_tmp.t_product_tag tpt on tp.id = tpt.product_id
+left join gemini.t_product_category tpc on  tpt.category_id1 = tpc.id
+where 1=1
+and dmot.store_city_code = '010'
+and dmot.bussiness_group_id = '8ac28b935fed0bc8015fed4c76f60018'
+and dmot.sign_time >= '2018-01-01'
+and tpc.level=1
+group by 
+月份,
+tpt.category_id1,
+用户类型
+order by 月份,一级分类
+
+
+-------------2.2 
+select 
+gemini.date_trunc_wm(dmot.sign_time,'week',1) as 自然周,
+max(tpc.name) as 一级分类,
+count(distinct dmot.customer_id) as 用户数量,
+count(quantity) as 销售数量,
+sum(unit_price*quantity) as 销售额,
+if(dmot.order_tag1 like '%M%' , '社员', '非社员') as 用户类型,
+max(dmot.eshop_name) as E店名称
+from 
+daqweb.df_mass_order_total dmot
+left join gemini.t_order_item toi on dmot.id = toi.order_id
+ join gemini.t_product tp on toi.eshop_pro_id = tp.id
+ join gemini_dfs_tmp.t_product_tag tpt on tp.id = tpt.product_id
+left join gemini.t_product_category tpc on  tpt.category_id1 = tpc.id
+where 1=1
+and dmot.store_city_code = '010'
+and dmot.bussiness_group_id = '8ac28b935fed0bc8015fed4c76f60018'
+and dmot.sign_time >= '2018-01-01'
+and tpc.level=1
+group by 
+自然周,
+tpt.category_id1,
+用户类型
+order by 自然周,一级分类
+
+
+
+
+
+
+
+
+
+
+-------------3 
+select 
+max(tpc.name) as 一级分类,
+count(distinct dmot.customer_id) as 用户数量,
+count(quantity) as 销售数量,
+sum(unit_price*quantity) as 销售额,
+if(dmot.order_tag1 like '%M%' , '社员', '非社员') as 用户类型,
+max(dmot.eshop_name) as E店名称
+from 
+daqweb.df_mass_order_total dmot
+left join gemini.t_order_item toi on dmot.id = toi.order_id
+left join gemini.t_product tp on toi.eshop_pro_id = tp.id
+left join gemini_dfs_tmp.t_product_tag tpt on tp.id = tpt.product_id
+left join gemini.t_product_category tpc on  tpt.category_id1 = tpc.id
+where 1=1
+and dmot.store_city_code = '010'
+and dmot.bussiness_group_id = '8ac28b935fed0bc8015fed4c76f60018'
+and dmot.sign_time >= '2018-01-01'
+group by 
+tpt.category_id1,
+用户类型
+order by 一级分类
+

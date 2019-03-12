@@ -1,0 +1,81 @@
+select 
+ tp.content_name as SKU名称, 
+ tp.code as sku编码,
+ concat(level1_name, ',' , level2_name , ',' ,level3_name) as  品类,
+ dd.channel_code 频道编码,
+ dd.channel_name as 频道名,
+ ifnull(dd.department_code , cc.department_code) as 事业群编码,
+  ifnull(dd.department_name,cc.department_name)   as 事业群名称
+
+ from gemini.t_product tp 
+ left join 
+(
+	select 
+	tpt.product_id,
+	max(tpc1.name) as level1_name , 
+	max(tpc2.name) as level2_name , 
+	max(tpc3.name) as level3_name  
+	from 
+	gemini.t_product_tag tpt 
+	left join gemini.t_product_category tpc1 on  tpt.category_id1 = tpc1.id 
+	left join gemini.t_product_category tpc2 on  tpt.category_id2 = tpc2.id 
+	left join gemini.t_product_category tpc3 on  tpt.category_id3 = tpc3.id 
+	where tpt.category_id1 is not null 
+	group by 
+	tpt.product_id
+)  vpc on tp.id = vpc.product_id
+left join 
+(
+	SELECT  * from gemini.t_eshop  
+	where publish = 'yes' 
+	AND freeze_status = 'no' 
+	AND business_status in ( 'open','rest') 
+	AND status = 0
+	and name not like '%测试%'
+	and name not like '%秋秋%'
+	and name not like '%秋红%'
+	and name not like '%秋快递%'
+	and white !='QA'
+)tep on tp.eshop_id = tep.id 
+LEFT JOIN (
+	SELECT tep2.id AS department_id,
+		   tep2.name AS department_name,
+		   tep2.code as department_code ,
+		   tep3.tep3_name AS channel_name,
+		   tep3.tep3_id AS channel_id,
+		   tep3.tep3_code as channel_code 
+	FROM gemini.t_department_channel tep2 JOIN
+	  ( 
+		SELECT
+		tep3.parent_id,
+        tep3.name AS tep3_name,
+        tep3.id AS tep3_id,
+		tep3.code as tep3_code 
+		FROM gemini.t_department_channel tep3
+		WHERE tep3.level=2
+	  ) tep3 ON tep2.id=tep3.parent_id
+	WHERE tep2.level=1
+) dd  ON tep.channel_id=dd.channel_id	
+left join 
+(
+		SELECT tep2.id AS department_id,
+		   tep2.name AS department_name,
+		   tep2.code as department_code ,
+		   tep3.tep3_name AS channel_name,
+		   tep3.tep3_id AS channel_id,
+		   tep3.tep3_code as channel_code 
+	FROM gemini.t_department_channel tep2 JOIN
+	  ( 
+		SELECT
+		tep3.parent_id,
+        tep3.name AS tep3_name,
+        tep3.id AS tep3_id,
+		tep3.code as tep3_code 
+		FROM gemini.t_department_channel tep3
+		WHERE tep3.level=2
+	  ) tep3 ON tep2.id=tep3.parent_id
+	WHERE tep2.level=1
+) cc  on  tep.department_id = cc.department_id
+
+where  tp.STATUS = 0  AND tp.publish = 'yes' AND (tp.content_shelf='on' OR tp.content_shelf ='hidden')
+ 

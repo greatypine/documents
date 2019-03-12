@@ -1,0 +1,290 @@
+
+	select
+		dup1.customer_id as 用户id,
+		dup1.customer_phone as 电话,
+		T_3.num as '同一天同一门店注册,并且号段相同的注册数'
+		from
+	daqweb.df_user_profile dup1
+	left join  daqweb.view_customer_store vcs1 on dup1.customer_id = vcs1.customer_id
+	join
+	 (
+		select 
+			  concat(substr(regist_time ,1,10) ,substr(customer_phone ,1,7) ,  vcs.store_id ) as id ,
+			  substr(regist_time ,1,10),
+			  substr(customer_phone ,1,7), 
+			  vcs.store_id,
+			  count(1) as num 
+		 from 
+		 daqweb.df_user_profile dup
+		 left join daqweb.view_customer_store vcs
+		 on dup.customer_id = vcs.customer_id
+		 where dup.regist_time is not null 
+		 and dup.customer_phone is not null 
+		 group by vcs.store_id,
+		 substr(regist_time ,1,10),
+		 substr(customer_phone ,1,7) 
+		 having count(1) > 1
+		 
+	 ) T_3 on  concat(substr(regist_time ,1,10) ,substr(customer_phone ,1,7) , vcs1.store_id )  = T_3.id 
+
+	where dup1.regist_time is not null 
+	and dup1.customer_phone is not null
+
+------------------------------------------	
+------------------------------------------	
+------------------------------------------	
+
+	select
+		dup1.customer_id as 用户id,
+		dup1.customer_phone as 电话,
+		T_3.num as '同一天同一门店注册,并且号段相同的注册数'
+		from
+	daqweb.df_user_profile dup1
+	left join  daqweb.view_customer_store vcs1 on dup1.customer_id = vcs1.customer_id
+	join
+	 (
+		select 
+			  concat(substr(regist_time ,1,10) ,substr(customer_phone ,1,7) ,  vcs.store_id ) as id ,
+			  substr(regist_time ,1,10),
+			  substr(customer_phone ,1,7), 
+			  vcs.store_id,
+			  count(1) as num 
+		 from 
+		 daqweb.df_user_profile dup
+		 left join daqweb.view_customer_store vcs
+		 on dup.customer_id = vcs.customer_id
+		 where dup.regist_time is not null 
+		 and dup.customer_phone is not null 
+		 group by vcs.store_id,
+		 substr(regist_time ,1,10),
+		 substr(customer_phone ,1,7) 
+		 having count(1) > 2
+		 
+	 ) T_3 on  concat(substr(regist_time ,1,10) ,substr(customer_phone ,1,7) , vcs1.store_id )  = T_3.id 
+	--join daqweb.df_user_member dum on dup1.customer_id = dum.customer_id
+	where dup1.regist_time is not null 
+	and dup1.customer_phone is not null
+
+	
+------------------------------------------	
+------------------------------------------	
+------------------------------------------	
+select count(1)  from 
+(
+	select
+		dup1.customer_id
+		from
+	daqweb.df_user_profile dup1
+	left join  daqweb.view_customer_store vcs1 on dup1.customer_id = vcs1.customer_id
+	join
+	 (
+		select 
+			  concat(substr(regist_time ,1,10) ,substr(customer_phone ,1,7) ,  vcs.store_id ) as id ,
+			  substr(regist_time ,1,10),
+			  substr(customer_phone ,1,7), 
+			  vcs.store_id,
+			  count(1) as num 
+		 from 
+		 daqweb.df_user_profile dup
+		 left join daqweb.view_customer_store vcs
+		 on dup.customer_id = vcs.customer_id
+		 where dup.regist_time is not null 
+		 and dup.customer_phone is not null 
+		 group by vcs.store_id,
+		 substr(regist_time ,1,10),
+		 substr(customer_phone ,1,7) 
+		 having count(1) >=3
+		 
+	 ) T_3 on  concat(substr(regist_time ,1,10) ,substr(customer_phone ,1,7) , vcs1.store_id )  = T_3.id 
+	join
+	(
+		select 
+			customer_id 
+		from 
+			gabase.b_user_tag 
+		where value in (
+			select  value 
+			from gabase.b_user_tag 
+			where key='register_mac_address' 
+			and value is not null and value != '' 
+			group by value  having count(1) > 1 
+		 )
+	)T_4 on dup1.customer_id = T_4.customer_id
+	join daqweb.df_user_member dum on dup1.customer_id = dum.customer_id
+	where dup1.regist_time is not null 
+	and dup1.customer_phone is not null
+) T_2 
+	
+------------------------------------------	
+------------------------------------------	
+------------------------------------------	
+select count(1)  from 
+(
+	select
+		dup1.customer_id
+		from
+	daqweb.df_user_profile dup1
+	left join  daqweb.view_customer_store vcs1 on dup1.customer_id = vcs1.customer_id
+	join
+	 (
+		select 
+			  concat(substr(regist_time ,1,10) ,substr(customer_phone ,1,7) ,  vcs.store_id ) as id ,
+			  substr(regist_time ,1,10),
+			  substr(customer_phone ,1,7), 
+			  vcs.store_id,
+			  count(1) as num 
+		 from 
+		 daqweb.df_user_profile dup
+		 left join daqweb.view_customer_store vcs
+		 on dup.customer_id = vcs.customer_id
+		 where dup.regist_time is not null 
+		 and dup.customer_phone is not null 
+		 group by vcs.store_id,
+		 substr(regist_time ,1,10),
+		 substr(customer_phone ,1,7) 
+		 having count(1) >= 4
+		 
+	 ) T_3 on  concat(substr(regist_time ,1,10) ,substr(customer_phone ,1,7) , vcs1.store_id )  = T_3.id 
+	join
+	(
+		select 
+			customerid 
+		from 
+			gemini.register_customer_device_info 
+		where devicenum in (
+			select  devicenum 
+			from gemini.register_customer_device_info 
+			where 1=1
+			and devicenum is not null and devicenum != '' 
+			group by devicenum  
+			having count(1) > 1 
+		 )
+	)T_4 on dup1.customer_id = T_4.customerid
+	--join daqweb.df_user_member dum on dup1.customer_id = dum.customer_id
+	where dup1.regist_time is not null 
+	and dup1.customer_phone is not null
+) T_2 
+
+
+------------------------------
+------------------------------
+------------------------------
+
+
+		
+
+
+
+
+
+select count(1) from 
+(
+
+	select 
+		but.customer_id ,
+		
+	from 
+		gabase.b_user_tag  but
+		join daqweb.df_user_member dum on but.customer_id = dum.customer_id
+	where value in (
+		select  value 
+		from gabase.b_user_tag 
+		where key='register_mac_address' 
+		and value is not null and value != '' 
+		group by value  having count(1) >=3
+	 )
+) T_1 
+
+
+
+
+	select 
+		but.customer_id  as 用户id,
+		dum.mobilephone as 电话,
+		T_1.num as 相同mac地址数量
+	from 
+	gabase.b_user_tag  but
+	--join daqweb.df_user_member dum on but.customer_id = dum.customer_id
+	join (
+		select  
+			value,
+			count(1) as num 
+		from gabase.b_user_tag 
+		where key='register_mac_address' 
+		and value is not null and value != '' 
+		group by value  
+		having count(1) >=3
+	)T_1 on but.value = T_1.value 
+	
+	
+
+
+
+
+
+
+
+ >= 3  用户数: 488019   会员 : 35262
+ >= 4  用户数: 486060	会员 : 34445
+ >= 5  用户数: 484920	会员 : 34065
+ 
+ 
+
+ 
+ 
+select count(1) from 
+(
+
+	select 
+			rcdi.customerid 
+		from 
+			gemini.register_customer_device_info  rcdi
+			join daqweb.df_user_member dum on rcdi.customerid = dum.customer_id
+		where devicenum in (
+			select  devicenum 
+			from gemini.register_customer_device_info 
+			where 1=1
+			and devicenum is not null and devicenum != '' 
+			group by devicenum  
+			having count(1) >= 3 
+		 )	 
+) T_1 
+
+设备码
+ >= 3  用户数:  78854   会员 : 40484
+ >= 4  用户数:  486060	会员 : 34445
+ >= 5  用户数:  484920	会员 : 34065
+ 
+ 
+ 
+ 
+ 
+ 
+select 
+	rcdi.customerid  as 用户id,
+	tc.mobilephone as 电话,
+	T_1.num as 相同设备码用户数量
+from 
+gemini.register_customer_device_info  rcdi
+left join gemini.t_customer tc on rcdi.customerid = tc.id 
+--join daqweb.df_user_member dum on rcdi.customerid = dum.customer_id
+join(
+	select  
+	devicenum,
+	count(1) as num 
+	from gemini.register_customer_device_info 
+	where 1=1
+	and devicenum is not null and devicenum != '' 
+	group by devicenum  
+	having count(1) >= 3
+)T_1 on rcdi.devicenum = T_1.devicenum
+
+ 
+ 
+ 
+	
+	
+	
+
+	
+	

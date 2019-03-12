@@ -1,0 +1,79 @@
+
+select
+dmot.id , 
+tcoutype.content_batch,
+dmot.store_city_name,
+from_unixtime(unix_timestamp(dmot.sign_time), 'yyyy-MM'),
+dmot.store_name,
+sum(dmot.apportion_coupon)
+
+from 
+daqweb.df_mass_order_total dmot
+join gemini.t_order_item toi on dmot.id = toi.order_id 
+LEFT JOIN gemini.t_order_item_extra toie ON  toie.order_item_id=toi.id and toie.order_id=toi.order_id 	
+left join gemini.t_order_group tog on dmot.group_id = tog.id
+left join gemini.t_card_coupon tcou on tog.card_coupon_id = tcou.id
+left join gemini.t_card_coupontype tcoutype on tcou.type_id = tcoutype.id
+where tcoutype.content_batch in 
+('31987983')
+and dmot.sign_time > '2018-07' and sign_time < '2018-08'
+
+group by 
+dmot.id , 
+tcoutype.content_batch,
+dmot.store_city_name,
+from_unixtime(unix_timestamp(dmot.sign_time), 'yyyy-MM'),
+dmot.store_name
+order by tcoutype.content_batch,
+dmot.store_city_name,
+from_unixtime(unix_timestamp(dmot.sign_time), 'yyyy-MM'),
+dmot.store_name 
+
+
+
+
+
+
+select
+
+	dmot.id,
+	dmot.order_sn,
+	from_unixtime(unix_timestamp(dmot.sign_time), 'yyyy-MM')  as 月份,
+	max(dmot.eshop_name ) as E店名称,
+	dmot.eshop_id as E店id,
+	dmot.store_city_name as 城市名称,
+	dmot.department_name as 事业群名称,
+	toi.output_tax_rate  as 销项税率,
+	sum(ifnull(toie.apportion_coupon , 0)) as 使用优惠券总金额,
+	max(tcoutype.content_batch)
+
+from 
+daqweb.df_mass_order_total dmot
+join gemini.t_order_item toi on dmot.id = toi.order_id 
+LEFT JOIN gemini.t_order_item_extra toie ON  toie.order_item_id=toi.id and toie.order_id=toi.order_id 
+ join gemini.t_order_group tog on dmot.group_id = tog.id
+ join gemini.t_card_coupon tcou on tog.card_coupon_id = tcou.id
+ join gemini.t_card_coupontype tcoutype on tcou.type_id = tcoutype.id
+where dmot.sign_time > '2018-07' and dmot.sign_time < '2018-08'
+and tcoutype.content_batch = '31987983'
+group by 
+	dmot.id,
+	dmot.order_sn,
+	from_unixtime(unix_timestamp(dmot.sign_time), 'yyyy-MM') ,
+	dmot.eshop_id,
+	dmot.store_city_name,
+	dmot.department_name,
+	toi.output_tax_rate 
+order by 
+	from_unixtime(unix_timestamp(dmot.sign_time), 'yyyy-MM') ,
+	dmot.eshop_id,
+	dmot.store_city_name,
+	dmot.department_name,
+	toi.output_tax_rate 
+
+
+
+
+
+
+

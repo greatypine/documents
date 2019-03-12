@@ -1,0 +1,86 @@
+﻿
+
+
+select 
+T_1.create_time as 日期,
+T_1.move_eshop as 动销E店数,
+T_2.move_sku as 动销SKU数
+
+from
+(
+	select 
+	from_unixtime(unix_timestamp(toip.order_create_time), 'yyyy-MM-dd') as create_time,
+	count(distinct toip.eshop_id) as move_eshop
+	from 
+	datacube_kudu.t_order_item_pro toip
+	where  toip.order_create_time >'2018-11-12'
+	and toip.order_create_time < '2018-12-10'
+	group by 
+	from_unixtime(unix_timestamp(toip.order_create_time), 'yyyy-MM-dd')
+)T_1
+
+left join 
+
+(
+	select 
+	from_unixtime(unix_timestamp(toip.order_create_time), 'yyyy-MM-dd') as create_time,
+	count(distinct toip.eshop_pro_id) as move_sku
+
+	from 
+	datacube_kudu.t_order_item_pro toip
+	where  toip.order_create_time >'2018-11-12'
+	and toip.order_create_time < '2018-12-10'
+	group by 
+	from_unixtime(unix_timestamp(toip.order_create_time), 'yyyy-MM-dd')
+	
+)T_2 on  T_1.create_time = T_2.create_time
+
+order by 日期 desc 
+
+
+	
+
+
+
+
+
+
+
+select 
+from_unixtime(unix_timestamp(bs.last_modfiy_time), 'yyyy-MM-dd') as create_time,
+count(distinct bs.eshop_id) as online_eshop,
+count(distinct bs.sku_id) as online_sku
+
+datacube_kudu.bb_sku bs 
+where bs.sku_online = 'yes'
+and bs.last_modfiy_time >'2018-11-12'
+and bs.last_modfiy_time < '2018-12-09'
+group by from_unixtime(unix_timestamp(bs.last_modfiy_time), 'yyyy-MM-dd') 
+order by bs.last_modfiy_time desc 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
+
+
+
+
+
+
+
+

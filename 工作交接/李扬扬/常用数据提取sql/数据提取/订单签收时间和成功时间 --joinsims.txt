@@ -1,0 +1,34 @@
+select 
+ order_sn  as 订单编号,
+ max(store_city_name) as 城市,
+ max(order_status) as 订单状态,
+ max(sign_time) as 签收时间, 
+ max(success_time) as 成功时间  
+ 
+ from (
+	 SELECT 
+		dmot.order_sn  ,
+		dmot.store_city_name,
+		case
+		when dmot.order_status   = 'signed'  then '已签收'
+		when dmot.order_status   = 'success'  then '已成功'
+		when dmot.order_status  = 'commented'  then '已评论'
+		when dmot.order_status   = 'cancel'  then '已取消'
+		else '' end
+		as order_status,
+
+		IF(tof.order_status='signed', tof.create_time, NULL ) AS sign_time,
+		IF(tof.order_status='success', tof.create_time, NULL ) AS success_time
+	FROM daqweb.df_mass_order_total  dmot
+	left JOIN gemini.t_order_flow tof ON dmot.id=tof.order_id
+	left join gemini.t_eshop te on dmot.eshop_id = te.id 
+
+	where 1=1
+	and dmot.sign_time>='2018-12'
+	AND dmot.sign_time<'2018-12-12' 
+	and te.joint_ims = 'yes'
+	
+	 
+) t
+group by order_sn 
+order by  max(sign_time)

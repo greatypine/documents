@@ -1,0 +1,282 @@
+select tor.id,
+tcoutype.proration_platform,
+tcoutype.proration_seller 
+from gemini.t_order tor
+join gemini.t_order_group tog on (tor.group_id = tog.id)
+join gemini.t_card_coupon tcou on (tog.card_coupon_id = tcou.id)
+join gemini.t_card_coupontype tcoutype on (tcou.type_id = tcoutype.id) 
+
+where tor.sign_time>'2018-10-01' and tor.sign_time<'2018-11-01' ;
+
+
+
+
+
+select 
+count(1)
+from gemini.t_order tor
+join gemini.t_order_group tog on (tor.group_id = tog.id)
+join gemini.t_card_coupon tcou on (tog.card_coupon_id = tcou.id)
+join gemini.t_card_coupontype tcoutype on (tcou.type_id = tcoutype.id) 
+
+
+
+
+
+
+--总,没有按照优惠券分摊类型来分
+select
+st.name as '门店',
+toi.output_tax_rate AS '销售税率',
+ifnull(sum(toie.apportion_coupon),0) as '优惠券金额',
+ifnull(sum(toie.apportion_rebate),0) as '粮票'
+FROM t_order tor
+JOIN t_store st ON tor.store_id = st.id
+JOIN t_order_item toi ON tor.id = toi.order_id
+LEFT JOIN t_order_item_extra toie ON toi.id = toie.order_item_id AND toie.status = 0  AND toi.order_id = toie.order_id
+where tor.order_status = 'success'
+and st.city_code = '010'
+and st.name = '什刹海店'
+and tor.update_time > '2018-10-01' and tor.update_time < '2018-11-01' 
+group by 
+st.name ,
+toi.output_tax_rate 
+
+
+
+
+
+
+
+
+
+
+
+--优易
+select
+st.name as '门店',
+toi.output_tax_rate AS '销售税率',
+case
+when tcoutype.proration_platform = 100 then  '平台分摊'
+when tcoutype.proration_platform = 0 then  '商家分摊'
+end as 优惠券分摊类型 ,
+ifnull(sum(toie.apportion_coupon),0) as '优惠券金额'
+FROM gemini.t_order tor
+join gemini.t_order_group tog on (tor.group_id = tog.id)
+join gemini.t_card_coupon tcou on (tog.card_coupon_id = tcou.id)
+join gemini.t_card_coupontype tcoutype on (tcou.type_id = tcoutype.id) 
+JOIN gemini.t_store st ON tor.store_id = st.id
+join gemini.t_eshop te on tor.eshop_id =te.id  
+JOIN gemini.t_order_item toi ON tor.id = toi.order_id
+LEFT JOIN gemini.t_order_item_extra toie ON toi.id = toie.order_item_id AND toie.status = 0  AND toi.order_id = toie.order_id
+where tor.order_status = 'success'
+and st.city_code = '010'
+and tor.update_time > '2018-10-01' and tor.update_time < '2018-11-01' 
+and te.joint_ims = 'yes'
+group by 
+st.name ,
+toi.output_tax_rate ,
+优惠券分摊类型
+
+
+
+
+--总
+select
+st.name as '门店',
+toi.output_tax_rate AS '销售税率',
+case
+when tcoutype.proration_platform = 100 then  '平台分摊'
+when tcoutype.proration_platform = 0 then  '商家分摊'
+end as 优惠券分摊类型 ,d
+ifnull(sum(toie.apportion_coupon),0) as '优惠券金额'
+FROM gemini.t_order tor
+join gemini.t_order_group tog on (tor.group_id = tog.id)
+join gemini.t_card_coupon tcou on (tog.card_coupon_id = tcou.id)
+join gemini.t_card_coupontype tcoutype on (tcou.type_id = tcoutype.id) 
+JOIN gemini.t_store st ON tor.store_id = st.id
+JOIN gemini.t_order_item toi ON tor.id = toi.order_id
+LEFT JOIN gemini.t_order_item_extra toie ON toi.id = toie.order_item_id AND toie.status = 0  AND toi.order_id = toie.order_id
+where tor.order_status = 'success'
+and st.city_code = '010'
+and tor.update_time > '2018-10-01' and tor.update_time < '2018-11-01' 
+group by 
+st.name ,
+toi.output_tax_rate ,
+优惠券分摊类型
+
+
+
+----------------
+
+
+
+
+select 
+tcoutype.proration_platform ,  count(1)
+
+from gemini.t_order tor
+join gemini.t_order_group tog on (tor.group_id = tog.id)
+join gemini.t_card_coupon tcou on (tog.card_coupon_id = tcou.id)
+join gemini.t_card_coupontype tcoutype on (tcou.type_id = tcoutype.id) 
+and tor.update_time > '2018-10-01' and tor.update_time < '2018-11-01' 
+group by tcoutype.proration_platform
+
+
+
+
+
+
+
+
+
+-----------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------
+
+
+E店所属城市	优惠券批次	E店id	E店名称	门店id	门店名称	订单号	订单id	订单金额	优惠金额	下单时间	完成时间
+
+
+select
+	from_unixtime(unix_timestamp(dmot.create_time), 'yyyy-MM') as 月份,
+	dmot.store_city_name  as 城市,
+	dmot.cct_content_batch as 优惠券批次 ,
+	dmot.eshop_id as E店ID,
+	dmot.eshop_name  as E店名称,
+	dmot.store_id as 门店ID,
+	dmot.store_name as 门店名称,
+	dmot.order_sn as 订单编号,
+	dmot.id  as 订单ID,
+	dmot.trading_price as 订单金额,
+	if(T_2.apportion_coupon  = 0 ,dmot.trading_price - dmot.payable_price ,T_2.apportion_coupon  ) as 优惠券金额,
+	dmot.create_time as 下单时间,
+	T_1.create_time as 成功时间
+
+from daqweb.df_mass_order_total dmot
+join 
+(
+	select
+		tof.order_id,
+		tof.create_time
+	from
+		gemini.t_order_flow tof
+	where 1=1 
+	
+	and  tof.order_status ='success'
+)T_1 on dmot.id = T_1.order_id 
+left join (
+	select
+	toi.order_id ,
+	sum(ifnull(toie.apportion_coupon , 0)) as apportion_coupon
+	from 
+	gemini.t_order_item toi
+	LEFT JOIN gemini.t_order_item_extra toie ON  toie.order_item_id=toi.id and toie.order_id=toi.order_id
+	group  by toi.order_id
+)T_2 on dmot.id = T_2.order_id  
+where 1=1 
+and dmot.sign_time > '2018-07'
+and dmot.sign_time < '2018-08'
+and dmot.return_label = '0'
+and dmot.cct_content_batch in 
+('31987983')
+order by 
+from_unixtime(unix_timestamp(dmot.create_time), 'yyyy-MM'),
+dmot.store_city_name,
+dmot.cct_content_batch
+
+
+
+
+
+-----------------------------------
+-----------------------------------
+-----------------------------------
+
+
+
+select
+
+	from_unixtime(unix_timestamp(dmot.create_time), 'yyyy-MM') as 月份,
+	dmot.store_city_name  as 城市,
+	dmot.eshop_id as E店ID,
+	dmot.eshop_name  as E店名称,
+	dmot.group_id  as order_group_id,
+	dmot.order_sn as 订单号,
+	dmot.id  as 订单ID,
+	dmot.cct_content_batch as 优惠券批次 ,
+	dmot.returned_amount as 退款金额,
+	dmot.trading_price as 订单金额,
+	if(T_2.apportion_coupon  = 0 ,dmot.trading_price - dmot.payable_price ,T_2.apportion_coupon  ) as 优惠券金额,
+	dmot.return_time as 退货时间
+from daqweb.df_mass_order_total dmot
+left join (
+	select
+	toi.order_id ,
+	sum( ifnull(toie.apportion_coupon , 0) ) as apportion_coupon
+	from 
+	gemini.t_order_item toi
+	LEFT JOIN gemini.t_order_item_extra toie ON  toie.order_item_id=toi.id and toie.order_id=toi.order_id
+	group  by toi.order_id
+)T_2 on dmot.id = T_2.order_id 
+where 1=1 
+and dmot.sign_time > '2018-07'
+and dmot.sign_time < '2018-08'
+and dmot.return_label = '1'
+and dmot.cct_content_batch in 
+('31987983')
+order by 
+from_unixtime(unix_timestamp(dmot.create_time), 'yyyy-MM'),
+dmot.store_city_name,
+dmot.cct_content_batch
+
+
+
+
+
+
+select
+	toi.order_id ,
+	toie.apportion_coupon 
+from 
+gemini.t_order_item toi
+LEFT JOIN gemini.t_order_item_extra toie ON  toie.order_item_id=toi.id and toie.order_id=toi.order_id
+where toi.order_id = '559180995f7d4d5e9ef6b08dba249c54'
+
+
+
+
+
+
+select 
+
+tor.id , 
+tor.trading_price,
+tor.payable_price,
+tcoutype.content_batch,
+ts.name,
+ts.white as ts_white ,
+tep.name ,
+tep.white as tep_white
+from 
+gemini.t_order tor 
+left join gemini.t_store ts on tor.store_id = ts.id 
+left join gemini.t_eshop tep on tor.eshop_id = tep.id 
+left join gemini.t_order_group tog on tor.group_id = tog.id
+left join gemini.t_card_coupon tcou on tog.card_coupon_id = tcou.id
+left join gemini.t_card_coupontype tcoutype on tcou.type_id = tcoutype.id
+where tor.id in
+(
+ '559180995f7d4d5e9ef6b08dba249c54',
+ '8bbe577bb52a41669b7f2e5a42873ab7',
+ 'f9902ad2f2c541e5a7a824a9f0ada49e'
+ )
+
+
+
+
+
+
+
+
+

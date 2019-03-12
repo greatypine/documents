@@ -1,0 +1,70 @@
+
+
+select 
+
+T_1.eshop_name as E店名称,
+T_1.GMV,
+T_1.maoli as 毛利,
+T_1.order_num as 订单数,
+T_2.customer_num as 消费用户数,
+T_4.online_sku as 在线SKU数,
+T_3.move_sku as 动销SKU数
+from
+(
+	select 
+
+	eshop_id,
+	max(eshop_name)as eshop_name,
+	sum(gmv_price) as  GMV,
+	sum(ifnull(order_profit , 0) - ifnull(platform_price , 0)) as  maoli,
+	count(1) as order_num
+
+
+	from daqweb.df_mass_order_total dmot 
+	where dmot.return_label = '0'
+	and dmot.create_time > '2018-12-03'
+	and dmot.create_time < '2018-12-10'
+	group by dmot.eshop_id 
+
+)T_1 
+left join 
+
+(
+	select 
+	dmot.eshop_id,
+	count(distinct customer_id)  as customer_num
+
+	from daqweb.df_mass_order_total dmot 
+	where dmot.return_label = '0'
+	and dmot.create_time > '2018-12-03'
+	and dmot.create_time < '2018-12-10'
+	group by dmot.eshop_id
+
+)T_2 on T_1.eshop_id = T_2.eshop_id
+
+left join 
+
+(
+	select 
+	toip.eshop_id,
+	count(distinct toip.eshop_pro_id) as move_sku
+
+	from 
+	datacube_kudu.t_order_item_pro toip
+	where  toip.order_create_time >'2018-12-03'
+	and toip.order_create_time < '2018-12-10'
+	group by toip.eshop_id
+
+)T_3 on T_1.eshop_id = T_3.eshop_id
+
+
+left join
+(
+	select 
+    eshop_id ,
+    count(1) as online_sku
+	from gemini.t_product where publish = 'yes'
+	group by eshop_id 
+)T_4 on T_1.eshop_id = T_4.eshop_id
+
+

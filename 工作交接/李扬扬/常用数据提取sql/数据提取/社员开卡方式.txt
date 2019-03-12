@@ -1,0 +1,20 @@
+ 
+ select 
+ tum.mobilephone as 电话,
+ 
+ case
+	when tum.member_type   = 'associator_start_2'  then '199新开卡'
+	when tum.member_type   = 'associator_up_2'  then '升级为2'
+	when tum.member_type  = 'plus'  then '99元老会员'
+	when tum.member_type   = 'groupLevel2'  then '集采用户'
+	else '' end
+as 开卡方式
+
+from daqweb.df_user_member tum
+where tum.mobilephone in (
+'17600913078',
+'15369836127',
+'18611359462'
+)
+ 
+ 

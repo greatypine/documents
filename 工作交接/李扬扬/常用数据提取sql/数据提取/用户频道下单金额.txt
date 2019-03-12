@@ -1,0 +1,36 @@
+ select 
+	tor.customer_id  as 用户id,
+	dd.channel_name as 频道名称,
+	tsa.name as 城市,
+	sum(if(tor.is_split = 'yes' , tor.trading_price/tog.combo_quantity ,tor.trading_price )) as 总金额
+ 
+ FROM gemini.t_order tor
+ left join gemini.t_order_group tog on tor.group_id = tog.id
+ left join gemini.t_eshop tep on tor.eshop_id = tep.id 
+ LEFT JOIN (
+	SELECT tep2.id AS department_id,
+		   tep2.name AS department_name,
+		   tep3.tep3_name AS channel_name,
+		   tep3.tep3_id AS channel_id
+	FROM gemini.t_department_channel tep2 JOIN
+	  ( 
+		SELECT
+		tep3.parent_id,
+        tep3.name AS tep3_name,
+        tep3.id AS tep3_id
+		FROM gemini.t_department_channel tep3
+		WHERE tep3.level=2
+	  ) tep3 ON tep2.id=tep3.parent_id
+	WHERE tep2.level=1
+) dd  ON tep.channel_id=dd.channel_id
+left join gemini.t_store ts on tor.store_id = ts.id 
+left join  gemini.t_sys_area tsa on ts.city_code =  tsa.code
+where tor.create_time > '2018-11' and tor.create_time < '2018-12'
+group by 	
+tor.customer_id,
+dd.channel_name,
+tsa.name
+order by 
+tor.customer_id,
+dd.channel_name,
+tsa.name

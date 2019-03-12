@@ -1,0 +1,87 @@
+create table gabase.b_blacklist as 
+select
+T_1.customer_id ,
+T_1.customer_phone,
+ifnull(T_1.phone_num  , 0) as phone_num,
+ifnull(T_2.mac_num, 0) as mac_num,
+ifnull(T_3.device_num, 0) as device_num,
+T_1.ismember,
+T_2.mac_address,
+T_3.devicenum
+
+from 
+(
+	select
+		dup1.customer_id ,
+		dup1.customer_phone,
+		TT.num as phone_num,
+		if(dum.customer_id is null ,'no' ,'yes' ) as ismember
+		from
+	daqweb.df_user_profile dup1
+	left join  daqweb.view_customer_store vcs1 on dup1.customer_id = vcs1.customer_id
+	join
+	 (
+		select 
+			  concat(substr(regist_time ,1,10) ,substr(customer_phone ,1,7) ,  vcs.store_id ) as id ,
+			  substr(regist_time ,1,10),
+			  substr(customer_phone ,1,7), 
+			  vcs.store_id,
+			  count(1) as num 
+		 from 
+		 daqweb.df_user_profile dup
+		 left join daqweb.view_customer_store vcs
+		 on dup.customer_id = vcs.customer_id
+		 where dup.regist_time is not null 
+		 and dup.customer_phone is not null 
+		 group by vcs.store_id,
+		 substr(regist_time ,1,10),
+		 substr(customer_phone ,1,7) 
+		 
+	 ) TT on  concat(substr(regist_time ,1,10) ,substr(customer_phone ,1,7) , vcs1.store_id )  = TT.id 
+	left join daqweb.df_user_member dum on dup1.customer_id = dum.customer_id
+	where dup1.regist_time is not null 
+	and dup1.customer_phone is not null
+)T_1
+
+left join (
+
+	select 
+		vcm.customer_id,
+		vcm.mac_address,
+		TT.num  as mac_num
+	from 
+	daqweb.view_customer_mac vcm
+	join (
+		select  
+			value,
+			count(1) as num 
+		from gabase.b_user_tag 
+		where key='register_mac_address' 
+		and value is not null and value != '' 
+		group by value  
+	)TT on vcm.mac_address = TT.value 
+
+)T_2 on T_1.customer_id = T_2.customer_id 
+
+left join (
+
+	select 
+		rcdi.customerid  as  customer_id ,
+		rcdi.devicenum,
+		TT.num  as device_num
+	from 
+	gemini.register_customer_device_info  rcdi
+	join(
+		select  
+		devicenum,
+		count(1) as num 
+		from gemini.register_customer_device_info 
+		where 1=1
+		and devicenum is not null and devicenum != '' 
+		group by devicenum  
+	)TT on rcdi.devicenum = TT.devicenum
+
+)T_3 on T_1.customer_id = T_3.customer_id
+
+
+

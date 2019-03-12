@@ -1,0 +1,77 @@
+ ----------------------------------------
+SELECT 
+  T_1.store_id as  门店id,
+  T_1.store_name as 门店名称,
+  T_1.eshop_pro_id  as 商品id,
+  T_1.eshop_pro_name  as 商品名称,
+  T_1.total as 销售总数
+  
+FROM (
+	  
+	  SELECT ROW_NUMBER() OVER(PARTITION BY T_2.store_id ORDER BY T_2.total desc ) rn,       
+		  T_2.store_id,
+		  T_2.store_name,
+		  T_2.eshop_pro_id,
+		  T_2.eshop_pro_name,
+		  T_2.total
+	   from  (
+		select 
+		  concat(dipt.store_id ,dipt.eshop_pro_id ) as id ,
+		  dipt.store_id,
+		  max(dipt.store_name) as store_name ,
+		  dipt.eshop_pro_id,
+		  max(dipt.eshop_pro_name) as eshop_pro_name,
+		  sum(dipt.quantity) as total
+		from gabase.b_item_pro_total dipt 
+		join daqweb.t_store ts on dipt.store_id = ts.platformid and  ts.estate = '运营中' and ts.city_name = '北京' and ts.flag=0
+		where strleft(  strright (from_unixtime(unix_timestamp(dipt.create_time , 'yyyy-MM-dd HH') ), 8) ,2)
+		in ( '20','21','22','23','24','01','02','03','04','05','06','07','08','09' )
+		and dipt.create_time < '2018-12-06'
+		group by 
+			dipt.store_id,
+			dipt.eshop_pro_id
+	   
+	   ) T_2
+	  
+	  ) T_1   
+WHERE T_1.rn < 11
+  
+order by 
+T_1.store_id,
+T_1.total desc 
+
+
+
+
+
+
+
+
+
+ 
+select 
+dipt.store_id as 门店id,
+max(ts.name ) as 门店名称,
+count(distinct dipt.order_id ) as 订单数量 ,
+sum(dipt.quantity * dipt.unit_price) as 总金额
+
+from gabase.b_item_pro_total dipt 
+join daqweb.t_store ts on dipt.store_id = ts.platformid and  ts.estate = '运营中' and ts.city_name = '北京'and ts.flag=0
+where strleft(  strright (from_unixtime(unix_timestamp(dipt.create_time , 'yyyy-MM-dd HH') ), 8) ,2)
+ in ( '20','21','22','23','24','01','02','03','04','05','06','07','08','09' )
+and dipt.create_time < '2018-12-06'
+group by 
+dipt.store_id
+
+ 
+
+
+
+
+
+
+
+
+
+
+

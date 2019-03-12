@@ -1,0 +1,225 @@
+
+
+
+ 
+ select
+     from_unixtime(unix_timestamp(sign_time), 'yyyy-MM-dd') as 日期,
+	 max(eshop_name) as E店名称,
+	 max(channel_name) as 频道名称 ,
+	 max(store_name) as 门店名称, 
+	 sum(if(return_label = '1' , 0 ,ifnull(gmv_price,0) ) ) as 签收gmv,
+	 sum(if(return_label = '0' , 0 ,ifnull(gmv_price,0) ) ) as 退款gmv,
+	 sum(ifnull(apportion_coupon, 0)) as 营销费用, 
+	 sum(ifnull(order_profit, 0 )) as 利润, 
+	 sum(if(return_label = '1' , 0 ,1 ) ) as 签收订单数,
+	 sum(if(return_label = '0' , 0 ,1 ) ) as 退款订单数,
+	 count(distinct customer_id ) as 消费用户数
+ from daqweb.df_mass_order_monthly
+ where sign_time >'2018-11-19'
+ and sign_time < '2018-12-17'
+ group by 
+ from_unixtime(unix_timestamp(sign_time), 'yyyy-MM-dd'),
+ eshop_id , 
+ channel_id ,
+ store_id 
+ order by 
+ from_unixtime(unix_timestamp(sign_time), 'yyyy-MM-dd')
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ select 
+ tep.name  as E店名称,
+ ifnull(T_1.online_sku_num , 0)  as 在线SKU数,
+ ifnull(T_2.dx_sku_num,0) as 动销SKU数
+ from
+ (
+	 select 
+		 tp.eshop_id ,  
+		 sum(
+			 CASE	
+			 WHEN tp.STATUS = 0
+			 AND tp.publish = 'yes' AND (tp.content_shelf='on' OR tp.content_shelf ='hidden') THEN
+				1
+			 ELSE
+				0
+			 END 
+		 ) as online_sku_num
+	 
+	 from gemini.t_product  tp
+	 group by tp.eshop_id
+ )T_1 
+ left join 
+ (
+	select 
+	tor.eshop_id ,
+	count(distinct toi.eshop_pro_id)  as dx_sku_num
+	from gemini.t_order_item toi
+	join daqweb.df_mass_order_monthly tor on toi.order_id = tor.id 
+	where tor.sign_time > '2018-12-10'
+	and tor.sign_time < '2018-12-17'
+	group by tor.eshop_id 
+ )T_2 on T_1.eshop_id = T_2.eshop_id
+ left join gemini.t_eshop tep on T_1.eshop_id = tep.id 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ select
+	 from_unixtime(unix_timestamp(tor.sign_time), 'yyyy-MM-dd') as  日期,
+	 max(tp.content_name) as sku名称,
+	 max(tep.name) as E店名称, 
+	 max( dd.channel_name ) as 频道名称 ,
+	 max(ts.name ) as 门店名称,
+	 IFNULL(max(toi.unit_price),0.00) AS sku单价,
+	 sum(if(return_label = '1' , 0 ,toi.quantity ) ) as sku签收数量,
+	 sum(if(return_label = '0' , 0 ,toi.quantity ) ) as sku退货数量
+  
+ from
+ gemini.t_order_item toi 
+ left join daqweb.df_mass_order_monthly tor on toi.order_id  = tor.id 
+ left join gemini.t_eshop tep on tor.eshop_id = tep.id 
+ LEFT JOIN (
+	SELECT tep2.id AS department_id,
+		   tep2.name AS department_name,
+		   tep3.tep3_name AS channel_name,
+		   tep3.tep3_id AS channel_id
+	FROM gemini.t_department_channel tep2 JOIN
+	  ( 
+		SELECT
+		tep3.parent_id,
+        tep3.name AS tep3_name,
+        tep3.id AS tep3_id
+		FROM gemini.t_department_channel tep3
+		WHERE tep3.level=2
+	  ) tep3 ON tep2.id=tep3.parent_id
+	WHERE tep2.level=1
+) dd  ON tep.channel_id=dd.channel_id
+left join gemini.t_store ts on tor.store_id = ts.id 
+left join gemini.t_product tp on toi.eshop_pro_id = tp.id 
+where tor.sign_time > '2018-11-19' and tor.sign_time < '2018-12-17'
+group by 
+ from_unixtime(unix_timestamp(tor.sign_time), 'yyyy-MM-dd'),
+ tp.id , 
+ tep.id ,
+ dd.channel_id,
+ ts.id 
+order by 
+ from_unixtime(unix_timestamp(tor.sign_time), 'yyyy-MM-dd')
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ select 
+ T_1.time_t as 日期,
+ T_1.eshop_num as  动销E店数,
+ T_2.sku_num as 动销SKU数
+ 
+ 
+ from 
+ (
+	 select 
+	 from_unixtime(unix_timestamp(sign_time), 'yyyy-MM-dd') as time_t ,
+	 count(distinct tor.eshop_id) as eshop_num 
+	  
+	 from 
+	 daqweb.df_mass_order_monthly tor 
+	 left join gemini.t_order_item toi on tor.id = toi.order_id 
+	 where tor.sign_time >= '2018-12-10'
+	 and tor.sign_time < '2018-12-17'
+	 group by
+	 from_unixtime(unix_timestamp(sign_time), 'yyyy-MM-dd')
+ )T_1
+ left join 
+ (
+	 select 
+	 from_unixtime(unix_timestamp(sign_time), 'yyyy-MM-dd') as time_t ,
+	 count(distinct toi.eshop_pro_id) as sku_num 
+	  
+	 from 
+	 daqweb.df_mass_order_monthly tor 
+	 left join gemini.t_order_item toi on tor.id = toi.order_id 
+	 where tor.sign_time >= '2018-12-10'
+	 and tor.sign_time < '2018-12-17'
+	 group by
+	 from_unixtime(unix_timestamp(sign_time), 'yyyy-MM-dd')
+ )T_2 on T_1.time_t = T_2.time_t
+ 
+ order by 
+  T_1.time_t
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+  
+SELECT 
+tep.name  as E店名,
+tep.code as E店编码,
+dd.channel_name as 频道名,
+dd.channel_code as 频道编码
+from gemini.t_eshop  tep
+LEFT JOIN (
+	SELECT tep2.id AS department_id,
+		   tep2.name AS department_name,
+		   tep3.tep3_name AS channel_name,
+		   tep3.tep3_id AS channel_id,
+		   tep3.code as channel_code
+	FROM gemini.t_department_channel tep2 JOIN
+	  ( 
+		SELECT
+		tep3.parent_id,
+        tep3.name AS tep3_name,
+        tep3.id AS tep3_id,
+		tep3.code 
+		FROM gemini.t_department_channel tep3
+		WHERE tep3.level=2
+	  ) tep3 ON tep2.id=tep3.parent_id
+	WHERE tep2.level=1
+) dd  ON tep.channel_id=dd.channel_id	 	
+where tep.publish = 'yes' 
+AND tep.freeze_status = 'no' 
+AND tep.business_status in ( 'open','rest') 
+AND tep.status = 0
+and tep.name not like '%测试%'
+and tep.name not like '%秋秋%'
+and tep.name not like '%秋红%'
+and tep.name not like '%秋快递%'
+and tep.white !='QA'
+ 

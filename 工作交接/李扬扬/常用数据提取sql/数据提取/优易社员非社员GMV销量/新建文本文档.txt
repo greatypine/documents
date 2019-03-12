@@ -1,0 +1,59 @@
+==BJ
+
+select 
+from_unixtime(unix_timestamp(sign_time), 'yyyy-MM') as 月份,
+sum(gmv_price) as 社员GMV
+from 
+df_mass_order_total 
+where bussiness_group_id = '8ac28b935fed0bc8015fed4c76f60018' 
+and order_tag1 like '%M%'
+and sign_time >= '2018-01-01' and sign_time <'2018-10-27'
+and store_city_code = '010'
+group by from_unixtime(unix_timestamp(sign_time), 'yyyy-MM')
+order by  from_unixtime(unix_timestamp(sign_time), 'yyyy-MM')
+
+
+
+
+select 
+from_unixtime(unix_timestamp(sign_time), 'yyyy-MM') as 月份,
+sum(gmv_price) as 非社员GMV
+from 
+df_mass_order_total 
+where bussiness_group_id = '8ac28b935fed0bc8015fed4c76f60018' 
+and order_tag1 not  like '%M%'
+and store_city_code = '010'
+and sign_time >='2018-01-01' and sign_time <'2018-10-27'
+group by from_unixtime(unix_timestamp(sign_time), 'yyyy-MM')
+order by  from_unixtime(unix_timestamp(sign_time), 'yyyy-MM')
+
+
+
+
+==TJ
+select 
+from_unixtime(unix_timestamp(sign_time), 'yyyy-MM') as 月份,
+sum(gmv_price) as 社员GMV
+from 
+df_mass_order_total 
+where bussiness_group_id = '8ac28b935fed0bc8015fed4c76f60018' 
+and order_tag1 like '%M%'
+and sign_time >= '2018-01-01' and sign_time <'2018-10-27'
+and store_city_code = '022'
+group by from_unixtime(unix_timestamp(sign_time), 'yyyy-MM')
+order by  from_unixtime(unix_timestamp(sign_time), 'yyyy-MM')
+
+
+
+
+select 
+from_unixtime(unix_timestamp(sign_time), 'yyyy-MM') as 月份,
+sum(gmv_price) as 非社员GMV
+from 
+df_mass_order_total 
+where bussiness_group_id = '8ac28b935fed0bc8015fed4c76f60018' 
+and order_tag1 not  like '%M%'
+and store_city_code = '022'
+and sign_time >='2018-01-01' and sign_time <'2018-10-27'
+group by from_unixtime(unix_timestamp(sign_time), 'yyyy-MM')
+order by  from_unixtime(unix_timestamp(sign_time), 'yyyy-MM')

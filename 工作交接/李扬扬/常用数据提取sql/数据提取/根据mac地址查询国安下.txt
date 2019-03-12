@@ -1,0 +1,229 @@
+select 
+	vcm.customer_id as  用户id,
+	T_2.order_sn as 查询订单号,
+	T_2.mobilephone as 查询电话,
+	T_2.mobilephone as customer表电话,
+	T_1.tel as 紧急联系人电话,
+	T_1.name as  姓名,
+	T_1.city as 城市,
+	T_1.zw as 职位
+from 
+	daqweb.view_customer_mac  vcm
+join 
+(
+	select 
+	vm.mac_address ,
+	T_3.mobilephone,
+	T_3.order_sn
+	from daqweb.view_customer_mac vm
+	join  
+	(
+		select 
+		tc.id ,
+		tc.mobilephone,
+		tor.order_sn
+		from  gemini.t_customer  tc 
+		join gemini.t_order tor   on tc.id = tor.customer_id
+		where tor.order_sn in 
+		(
+			'xxxxxxxxxxxxxxx'
+		)
+	)T_3 on vm.customer_id = T_3.id
+)T_2 on vcm.mac_address = T_2.mac_address
+left join 
+(
+	select 
+	max(name) as name , 
+	max(city) as city,
+	max(zw) as zw ,
+	max(tel) as tel,
+	mobilephone
+	from 
+	daqweb.view_employee_offline
+    where  char_length(mobilephone) = 11
+    group by mobilephone	
+)T_1 on T_2.mobilephone = T_1.mobilephone
+
+
+
+
+
+
+
+-------------------------
+
+select
+ but.customer_id ,
+max(bu.value) as mac_address 
+from  gabase.b_user_tag  but
+where key='register_mac_address' 
+group by but.customer_id
+
+
+
+select 
+T_3.mobilephone as '电话号码', 
+vm.mac_address as 'mac地址'
+
+from  
+(
+	select
+	 but.customer_id ,
+	max(but.value) as mac_address 
+	from  gabase.b_user_tag  but
+	where key='register_mac_address' 
+	group by but.customer_id
+) vm
+join  
+(
+	select 
+	tc.id ,
+	tc.mobilephone
+	from  gemini.t_customer  tc 
+	where
+	tc.mobilephone in (
+		'13064738264',
+		'13119174058',
+		'18664712071',
+		'13148402187',
+		'18664712047',
+		'13312096836'
+	)
+)T_3 on vm.customer_id = T_3.id
+
+
+
+
+
+
+
+
+	select 
+	max(name) as name , 
+	max(city) as city,
+	max(zw) as zw ,
+	max(tel) as tel,
+	mobilephone
+	from 
+	daqweb.view_employee_offline
+    where  char_length(mobilephone) = 11
+	and mobilephone	 = '13820805145'
+    group by mobilephone	
+
+
+	
+	230212bcdaee487183e60de542dfb6ea
+	
+	
+	
+	
+	
+	
+	
+	
+	
+select 
+	vcm.customer_id as  用户id,
+	vcm.mac_address as mac地址,
+	T_1.mobilephone as 员工电话,
+	T_1.tel as 员工紧急联系人电话,
+	T_1.name as  姓名,
+	T_1.city as 城市,
+	T_1.zw as 职位
+from 
+	daqweb.view_customer_mac  vcm
+join gemini.t_customer tc on vcm.customer_id  = tc.id 
+left join 
+(
+	select 
+	max(name) as name , 
+	max(city) as city,
+	max(zw) as zw ,
+	max(tel) as tel,
+	mobilephone
+	from 
+	daqweb.view_employee_offline
+    where  char_length(mobilephone) = 11
+    group by mobilephone	
+)T_1 on tc.mobilephone = T_1.mobilephone
+where vcm.mac_address in 
+(
+'14:32:d1:e2:a6:35',
+'94:65:2d:a1:b9:df',
+'30:74:96:fb:34:83',
+'30:74:96:fb:34:81',
+'cc:2d:83:12:17:1e',
+'00:08:22:24:3d:0a',
+'60:91:f3:16:06:5c',
+'d8:6c:02:ac:40:40',
+'34:80:b3:a6:28:e6',
+'34:4d:f7:9b:c5:6c',
+'90:ad:f7:98:b1:6c'
+) 
+and T_1.zw is not null 
+order by vcm.mac_address
+	
+	
+	
+	-------------------------
+	-------------------------
+	-------------------------
+	
+select
+	dmot.order_sn ,
+	dmot.customer_mobile_phone as 下单用户号码,
+	dmot.addr_mobilephone as 收货人号码,
+	ifnull(dmot.employee_phone , tto.dm_mobile ) as 送货人手机号,
+	ifnull(dmot.employee_name , tto.dm_name ) as 送货人姓名
+from daqweb.df_mass_order_total dmot 
+left join gemini.t_tpl_order tto on dmot.order_sn = tto.order_sn 
+where dmot.order_sn in 
+(
+
+)
+	
+-----------------------
+-----------------------
+-----------------------
+
+select
+	ts.name as '门店名称',
+	tto.order_sn as '订单号',
+	tor.create_time as '下单时间' ,
+	tto.receiver_phone as '收货人手机号',
+	tto.receiver_name as '收货人姓名',
+	tto.dm_mobile as '配送人手机号',
+	tto.dm_name as '配送人姓名'
+
+from gemini.t_order tor 
+join   gemini.t_tpl_order tto on tor.order_sn = tto.order_sn 
+left join gemini.t_store ts on tor.store_id = ts.id 
+where ts.city_code  = '022'
+and tor.create_time < '2018-12-28'
+	
+	
+		
+-----------------------
+-----------------------
+-----------------------
+
+	
+select 
+tuc.storename as '门店名称',
+tuc.name as '员工名字',
+tuc.phone as '手机号',
+tuc.tel as '紧急联系人',
+tuc.zw as '职位',
+if(tuc.humanstatus = 1 , '在职' , '离职') as '是否在职'
+
+from daqweb.t_humanresources tuc
+where tuc.cityselect  = '天津'
+	
+	
+	
+	
+	
+	
+	
+	
+	

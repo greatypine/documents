@@ -1,0 +1,134 @@
+select 
+ifnull(T_1.category_name,'') as 商品分类,
+ifnull(T_1.online_num,0) as 在线商品数,
+ifnull(T_2.play_num,0) as 动销商品数,
+ifnull(T_3.member_num,0) as 社员数,
+ifnull(T_4.unmember_num,0) as 非社员数,
+ifnull(T_5.member_order_num,0) as 社员下单数 ,
+ifnull(T_5.unmember_order_num,0) as 非社员下单数,
+ifnull(T_5.member_order_qutity,0) as 社员销售数量,
+ifnull(T_5.unmember_order_qutity,0) as  非社员销售数量,
+ifnull(T_5.member_gmv,0) as 社员销售额 ,
+ifnull(T_5.unmember_gmv,0) as 非社员销售额
+from 
+(
+	select 
+		tpt.category_id1,
+		max(tpc.name) as category_name,
+		count(distinct bs.sku_id) as online_num
+	from 
+		datacube_kudu.bb_sku bs 
+		join gemini.t_product_tag tpt on bs.sku_id = tpt.product_id
+		left join gemini.t_product_category tpc on  tpt.category_id1 = tpc.id
+		join gemini.t_eshop te on bs.eshop_id = te.id 
+	where 1=1
+		and te.bussiness_group_id = '8ac28b935fed0bc8015fed4c76f60018'
+		and te.city_code=  '010'
+		and bs.month_time = '2018-10'
+		and bs.sku_online = 'yes'
+	
+	group by 
+		tpt.category_id1
+)T_1
+left join 
+(
+	select 
+	tpt.category_id1,
+	count(distinct toi.eshop_pro_id ) as play_num
+	from 
+	daqweb.df_mass_order_monthly dmot
+	join gemini.t_order_item toi on dmot.id = toi.order_id
+	join gemini.t_product tp on toi.eshop_pro_id = tp.id
+	join gemini.t_product_tag tpt on tp.id = tpt.product_id
+	left join gemini.t_product_category tpc on  tpt.category_id1 = tpc.id
+	where 1=1
+	and dmot.store_city_code = '010'
+	--优易
+	and dmot.bussiness_group_id = '8ac28b935fed0bc8015fed4c76f60018'
+	and dmot.sign_time > '2018-10-01' 
+	and dmot.sign_time < '2018-11-01' 
+	group by 
+	tpt.category_id1
+)T_2 on T_1.category_id1 = T_2.category_id1
+left join 
+(
+	select 
+	tpt.category_id1,
+	count(distinct dmot.customer_id ) as member_num
+	from 
+	daqweb.df_mass_order_monthly dmot
+	join gemini.t_order_item toi on dmot.id = toi.order_id
+	join gemini.t_product tp on toi.eshop_pro_id = tp.id
+	join gemini.t_product_tag tpt on tp.id = tpt.product_id
+	left join gemini.t_product_category tpc on  tpt.category_id1 = tpc.id
+	where 1=1
+	and dmot.store_city_code = '010'
+	--优易
+	and dmot.bussiness_group_id = '8ac28b935fed0bc8015fed4c76f60018'
+	and dmot.sign_time > '2018-10-01' 
+	and dmot.sign_time < '2018-11-01' 
+	and dmot.order_tag1 like '%M%' 
+	group by 
+	tpt.category_id1
+)T_3 on T_1.category_id1 = T_3.category_id1
+left join 
+(
+	select 
+	tpt.category_id1,
+	count(distinct dmot.customer_id ) as unmember_num
+	from 
+	daqweb.df_mass_order_monthly dmot
+	join gemini.t_order_item toi on dmot.id = toi.order_id
+	join gemini.t_product tp on toi.eshop_pro_id = tp.id
+	join gemini.t_product_tag tpt on tp.id = tpt.product_id
+	left join gemini.t_product_category tpc on  tpt.category_id1 = tpc.id
+	where 1=1
+	and dmot.store_city_code = '010'
+	--优易
+	and dmot.bussiness_group_id = '8ac28b935fed0bc8015fed4c76f60018'
+	and dmot.sign_time > '2018-10-01' 
+	and dmot.sign_time < '2018-11-01' 
+	and dmot.order_tag1 not  like '%M%' 
+	group by 
+	tpt.category_id1
+)T_4 on T_1.category_id1 = T_4.category_id1
+left join 
+(
+	select 
+	tpt.category_id1,
+	sum(case when dmot.order_tag1  like '%M%'  then 1 else 0 end) as member_order_num ,
+	sum(case when dmot.order_tag1 not  like '%M%'  then 1 else 0 end) as unmember_order_num ,
+	sum(case when dmot.order_tag1  like '%M%'  then toi.quantity else 0 end) as member_order_qutity ,
+	sum(case when dmot.order_tag1  not like '%M%'  then toi.quantity else 0 end) as unmember_order_qutity ,
+	sum(case when dmot.order_tag1  like '%M%'  then toi.unit_price*toi.quantity else 0 end) as member_gmv ,
+	sum(case when dmot.order_tag1 not  like '%M%'  then toi.unit_price*toi.quantity else 0 end) as unmember_gmv 
+	from 
+	daqweb.df_mass_order_monthly dmot
+	join gemini.t_order_item toi on dmot.id = toi.order_id
+	join gemini.t_product tp on toi.eshop_pro_id = tp.id
+	join gemini.t_product_tag tpt on tp.id = tpt.product_id
+	left join gemini.t_product_category tpc on  tpt.category_id1 = tpc.id
+	where 1=1
+	and dmot.store_city_code = '010'
+	--优易
+	and dmot.bussiness_group_id = '8ac28b935fed0bc8015fed4c76f60018'
+	and dmot.sign_time > '2018-10-01' 
+	and dmot.sign_time < '2018-11-01' 
+	group by 
+	tpt.category_id1
+)T_5 on T_1.category_id1 = T_5.category_id1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

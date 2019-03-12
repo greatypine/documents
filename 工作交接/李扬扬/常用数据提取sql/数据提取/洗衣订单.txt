@@ -1,0 +1,31 @@
+﻿select 
+	tsa.name as 城市,
+	ts.name as 门店,
+	tep.name as E店,
+	tor.order_sn as 订单编号,
+	tor.trading_price as 订单金额,
+	tor.order_status as 订单状态,
+	tor.create_time as 订单创建时间,
+	tor.sign_time  as 订单签收时间
+
+from gemini.t_order tor 
+JOIN gemini.t_store ts ON ts.id=tor.store_id
+left join gemini.t_sys_area tsa  on ts.city_code = tsa.code 
+LEFT JOIN gemini.t_eshop tep ON tep.id=tor.eshop_id
+join  gemini.t_employee tee on tor.employee_id = tee.id  and tee.system_code = 1 
+order by 
+tsa.name,
+ts.name,
+tep.name
+
+
+
+select 
+	tee.name as 员工姓名 ,
+	tee.mobilephone as 手机号,
+	tee.store_id  as 门店id, 
+	ts.name  as 门店名称
+from
+gemini.t_employee tee 
+left join  gemini.t_store ts ON ts.id=tee.store_id
+where tee.system_code = 1 
