@@ -1,0 +1,154 @@
+==========SSD测试web=============
+10.16.21.253
+root admin123
+=================================
+
+
+==========SSD测试数据库==========
+SSD本地测试数据库
+10.16.21.116 root    admin123
+mysql root
+4#FAHoWs8Hw@yD%b
+mysql daquser   3306
+DSIF0H1H021qfxy1
+ll
+=================================
+
+
+=============daqWeb正式数据库======
+daqWeb正式数据库连接用户名
+mysql -udaquser3 -p -h10.10.10.37 -P4006 
+FtYr4Xa*jzwAxuX92A5ClEm5H3zh9OxL
+================================= 
+
+
+===========北京ELK日志查看========
+北京ELK日志查看:
+http://115.182.249.132:49483
+admin 
+THTPH2ai8ZgPXo*%xx
+=================================
+
+
+正式环境机器连接步骤：
+=================================
+1)先连接跳板机：115.182.249.132 
+ssh端口：30315
+nagio：Wl cb{Idc]Zxga8888
+2)连接中专机器：10.10.30.2  ssh端口：60080
+nagio：ZX! 9q$GU_oHGdu
+3）然后连接10.10.10.34，端口60080
+nagio：ZX! 9q$GU_oHGdu
+
+
+
+---------迁移后 最新-------------
+跳转机：
+115.182.249.132 
+ssh端口：30315
+
+nagio：Wl cb{Idc]Zxga8888
+
+跳转机：
+ssh nagio@10.10.30.2 -p60080
+ZX! 9q$GU_oHGdu
+
+跳转机：
+ssh nagio@10.10.10.34 -p60080
+ZX! 9q$GU_oHGdu
+
+ssh nagio@10.10.10.35 -p60080
+ZX! 9q$GU_oHGdu
+
+ssh nagio@10.10.10.36 -p60080
+ZX! 9q$GU_oHGdu
+
+
+
+==============OSS config===================
+endpoint：oss-cn-beijing.aliyuncs.com
+bucketName：guoanshuju
+accessKeyId：LTAII1Y7Z7fXhyJF
+accessKeySecret：26W34k5jCT4BEmk0RG1lhMTxp9w7Xi
+===========================================
+
+---------------------vm1 vm2 vm3虚拟机----------------
+10.16.21.54		root		root123
+    ds数据库10.16.21.59    root jixson
+
+
+
+10.16.21.55		root		admin123
+
+
+
+
+
+10.16.21.57		root		root123
+------------------------------------------------------
+10.16.21.57:
+	mongo-repl( 测试机mongo 10.16.21.77): root   admin123
+
+
+=================vpn账号===================
+user28 yL19J6iOzwKjlQoP 115.182.249.132
+user29 Gg5KOnzGCkMlczQd 115.182.249.132
+user30 b0bAdNo9JyzcFe9L 115.182.249.132
+===========================================
+
+=============阿里云eprj短信发送=============
+阿里云eprj
+123.56.204.206   9726
+root (~X8P7Em(gm.!U-(K@x5G]4WV)vU!zW@
+MySQL（演示demo数据库）
+root
+~UrDz5cZmFdt
+===========================================
+
+=============阿里云daqWeb演示demo===========
+123.56.204.170   9726
+root U#5+R4DKoVH7QgJIXYi]#qjZG+lmGuxy
+MySQL（CAS测试数据库）
+root   
+Gasq123abc_
+===========================================
+
+=============SVN=================
+10.16.21.82
+Administrator
+bigdata
+=================================
+
+
+=============GIT================
+网页端：http://10.16.21.58
+root
+RxpAWno8hmE38PpL
+服务器：10.16.21.58
+root
+7kenMD3m1JxbF@lJ
+================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
